@@ -18,7 +18,7 @@ static BitmapLayer *s_day_tens_layer;
 static BitmapLayer *s_day_ones_layer;
 static BitmapLayer *s_week_layer;
 
-// 固定文字圖層("月"、"日"、"周")
+// 固定文字圖層("月"、"日"、"週")
 static BitmapLayer *s_yue_layer;
 static BitmapLayer *s_ri_layer;
 static BitmapLayer *s_zhou_layer;
@@ -65,7 +65,7 @@ static void set_bitmap_on_layer(GBitmap **bitmap_ptr, BitmapLayer *bitmap_layer,
 // 時間顯示 - 大寫數字十位數資源
 const uint32_t TIME_UPPERCASE_TENS_RESOURCES[] = {
     0,                          // 0-10點不顯示十位
-    RESOURCE_ID_IMG_U10,        // 10-19點顯示"拾"
+    RESOURCE_ID_IMG_U10,        // 11-19點顯示"拾"
     RESOURCE_ID_IMG_U2,         // 20-23點顯示"貳"
 };
 
@@ -106,6 +106,8 @@ const uint32_t TIME_LOWERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_L8,         // 八
     RESOURCE_ID_IMG_L9          // 九
 };
+
+// 日期顯示 - 大寫數字十位數:因只有不顯示和"拾"，故省略
 
 // 日期顯示 - 大寫數字個位數資源
 const uint32_t DATE_UPPERCASE_ONES_RESOURCES[] = {
