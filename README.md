@@ -1,5 +1,7 @@
 # Chinese Character Watchface (中文數字錶盤)
 
+![image](display.jpg)
+
 This is a watch face for Pebble smartwatches that displays the time and date using traditional Chinese characters. It offers a unique and elegant way to read the time, blending traditional aesthetics with modern technology.
 
 ## Display Logic (顯示邏輯)
