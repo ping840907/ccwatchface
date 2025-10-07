@@ -4,6 +4,8 @@
 
 This is a watch face for Pebble smartwatches that displays the time and date using traditional Chinese characters. It offers a unique and elegant way to read the time, blending traditional aesthetics with modern technology.
 
+Its code are mostly written by Google Gemini, but the logical part are done by human.
+
 ## Display Logic (顯示邏輯)
 
 The watch face is designed to be both beautiful and easy to read once you understand the system.
