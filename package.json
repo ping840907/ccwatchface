@@ -1,8 +1,8 @@
 {
   "name": "ccwatchface",
   "author": "MakeAwesomeHappen",
-  "version": "1.0.0",
-  "keywords": ["中文"],
+  "version": "0.1",
+  "keywords": ["chinese"],
   "private": true,
   "dependencies": {},
   "pebble": {
