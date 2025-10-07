@@ -4,7 +4,7 @@
 
 This is a watch face for Pebble smartwatches that displays the time and date using traditional Chinese characters. It offers a unique and elegant way to read the time, blending traditional aesthetics with modern technology.
 
-Its code are mostly written by Google Gemini, but the logical part are done by human.
+Its code are mostly written by Google Gemini (incliuding this README file!), but the logical part are done by human (me).
 
 ## Display Logic (顯示邏輯)
 
@@ -34,3 +34,5 @@ The date is displayed in a single row at the bottom of the screen.
 ## Technical Implementation (技術實現)
 
 This watch face is written in C using the Pebble SDK. The display is not rendered using fonts. Instead, it dynamically assembles pre-rendered bitmap images for each Chinese character. Each digit or character you see on the screen is a separate image, and the C code calculates which images to display in which position based on the current time and date. This method ensures high-quality, stylized character rendering that is not dependent on system fonts.
+
+The reason why font import is not used is based on the font rendering limitations of the Pebble SDK, also a big thank you to [俐方體11號](https://github.com/ACh-K/Cubic-11) and [方舟像素字体](https://github.com/TakWolf/ark-pixel-font), as I borrowed a lot from their designs in my own font style.
