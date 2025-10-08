@@ -142,7 +142,8 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_SL6,        // 六
     RESOURCE_ID_IMG_SL7,        // 七
     RESOURCE_ID_IMG_SL8,        // 八
-    RESOURCE_ID_IMG_SL9         // 九
+    RESOURCE_ID_IMG_SL9,        // 九
+    RESOURCE_ID_IMG_SL0         // 〇
 };
 
 // ==================== 工具函式 ====================
@@ -218,6 +219,11 @@ static void update_time() {
         minute_tens_res_id = RESOURCE_ID_IMG_DIAN;
         minute_ones_res_id = RESOURCE_ID_IMG_ZHENG;
     } 
+    // 特殊處理:30分顯示為"點半"
+    else if (minute == 30) {
+        minute_tens_res_id = RESOURCE_ID_IMG_DIAN;
+        minute_ones_res_id = RESOURCE_ID_IMG_BAN;
+    }
     // 特殊處理:10分顯示為"一〇"
     else if (minute == 10) {
         minute_tens_res_id = RESOURCE_ID_IMG_L1;
@@ -272,12 +278,12 @@ static void update_date(struct tm *tick_time) {
     if (day == 10) {
         day_tens_res_id = RESOURCE_ID_IMG_SL1;
         day_ones_res_id = RESOURCE_ID_IMG_SL0;
-    } 
+    }
     // 一般情況:非整十的日期
     else if (d2 != 0) {
         day_tens_res_id = DATE_LOWERCASE_TENS_RESOURCES[d1];
         day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
-    } 
+    }
     // 整十日期
     else {
         day_tens_res_id = DATE_LOWERCASE_ONES_RESOURCES[d1];

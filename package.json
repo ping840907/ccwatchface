@@ -87,6 +87,11 @@
 "file": "time/zheng.png"
 },
 {
+"type": "bitmap",
+"name": "IMG_BAN",
+"file": "time/ban.png"
+},
+{
 "type": "bitmap", 
 "name": "IMG_L0",
 "file": "time/l0.png"
@@ -207,7 +212,7 @@
 "file": "date/sl0.png"
 },
 {
-"type": "bitmap", 
+"type": "bitmap",
 "name": "IMG_SL1",
 "file": "date/sl1.png"
 },
