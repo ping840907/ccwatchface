@@ -131,7 +131,6 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_SL7,        // 七
     RESOURCE_ID_IMG_SL8,        // 八
     RESOURCE_ID_IMG_SL9,        // 九
-    RESOURCE_ID_IMG_SL0         // 〇
 };
 
 // ==================== 工具函式 ====================
