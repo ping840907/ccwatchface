@@ -208,6 +208,11 @@
 },
 {
 "type": "bitmap", 
+"name": "IMG_SL0",
+"file": "date/sl0.png"
+},
+{
+"type": "bitmap",
 "name": "IMG_SL1",
 "file": "date/sl1.png"
 },
