@@ -227,17 +227,9 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
                 // 共同像素，保持不變
                 show = new_set;
             } else {
-                // 使用抖動矩陣來決定是否顯示像素
+                // 對於任何變化的像素，都套用50%的抖動效果
                 int threshold = dither_matrix[y % 8][x % 8];
-                int alpha = 32; // Explicitly set to 50% for the intermediate frame
-                
-                if (new_set && !old_set) {
-                    // 淡入：當 alpha > threshold 時顯示
-                    show = (alpha > threshold);
-                } else {
-                    // 淡出：當 (64 - alpha) > threshold 時顯示
-                    show = ((64 - alpha) > threshold);
-                }
+                show = (32 > threshold);
             }
             
             if (show) {
