@@ -1,12 +1,11 @@
 {
   "name": "ccwatchface",
-  "author": "MakeAwesomeHappen",
+  "author": "Sloth8497",
   "version": "0.1",
-  "keywords": ["chinese"],
-  "private": true,
+  "keywords": ["chinese", "watchface", "pixel", "mandarin"],
   "dependencies": {},
   "pebble": {
-    "displayName": "ccwatchface",
+    "displayName": "CCWatchface",
     "uuid": "ce8bff31-737b-43df-9fb7-aed63e6970af",
     "sdkVersion": "3",
     "enableMultiJS": true,
