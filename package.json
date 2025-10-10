@@ -3,6 +3,7 @@
   "author": "Sloth8497",
   "version": "0.1",
   "keywords": ["chinese", "watchface", "pixel", "mandarin"],
+  "description": "A Chinese-themed watchface for Pebble with custom bitmap resources.",
   "dependencies": {},
   "pebble": {
     "displayName": "CCWatchface",
