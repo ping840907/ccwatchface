@@ -6,13 +6,14 @@
 typedef struct {
     BitmapLayer *layer;
     GBitmap *bitmap;
-    GBitmap *old_bitmap;  // 保存舊的bitmap用於動畫
+    uint32_t current_resource_id;
 } DisplayLayer;
 
 // 動畫狀態結構
 typedef struct {
     uint8_t *old_pixels;   // 舊圖像的像素數據副本
     uint8_t *new_pixels;   // 新圖像的像素數據副本
+    int bytes_per_row;     // 每行的字節數
     GSize size;            // 圖像大小
     int step;              // 當前動畫步驟 (0-10)
     bool animating;        // 是否正在動畫
@@ -105,15 +106,19 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 /**
  * 複製 GBitmap 的像素數據
  */
-static uint8_t* copy_bitmap_data(GBitmap *bitmap, GSize size) {
+static uint8_t* copy_bitmap_data(GBitmap *bitmap, GSize size, int *bytes_per_row_out) {
     if (!bitmap) return NULL;
-
+    
     uint8_t *data = gbitmap_get_data(bitmap);
     if (!data) return NULL;
-
+    
     int bytes_per_row = gbitmap_get_bytes_per_row(bitmap);
+    if (bytes_per_row_out) {
+        *bytes_per_row_out = bytes_per_row;
+    }
+    
     int total_bytes = bytes_per_row * size.h;
-
+    
     uint8_t *copy = malloc(total_bytes);
     if (copy) {
         memcpy(copy, data, total_bytes);
@@ -134,40 +139,32 @@ static void init_animation(AnimationState *anim, GBitmap *old_bmp, GBitmap *new_
         free(anim->new_pixels);
         anim->new_pixels = NULL;
     }
-
+    
     anim->size = size;
     anim->step = 0;
     anim->animating = false;
-
-    // 如果新舊圖像相同，不需要動畫
-    if (old_bmp == new_bmp) return;
-
-    anim->old_pixels = copy_bitmap_data(old_bmp, size);
-    anim->new_pixels = copy_bitmap_data(new_bmp, size);
-
+    anim->bytes_per_row = 0;
+    
+    // 如果沒有舊圖像，直接顯示新圖像，不需要動畫
+    if (!old_bmp) return;
+    
+    int old_bpr = 0, new_bpr = 0;
+    anim->old_pixels = copy_bitmap_data(old_bmp, size, &old_bpr);
+    anim->new_pixels = copy_bitmap_data(new_bmp, size, &new_bpr);
+    
+    // 確保兩個圖像的字節數相同
+    if (old_bpr != new_bpr) {
+        if (anim->old_pixels) free(anim->old_pixels);
+        if (anim->new_pixels) free(anim->new_pixels);
+        anim->old_pixels = NULL;
+        anim->new_pixels = NULL;
+        return;
+    }
+    
+    anim->bytes_per_row = old_bpr;
+    
     if (anim->old_pixels && anim->new_pixels) {
         anim->animating = true;
-    }
-}
-
-/**
- * 混合兩個像素值
- */
-static uint8_t blend_pixel(uint8_t old_val, uint8_t new_val, int step, bool old_set, bool new_set) {
-    // 如果兩者都設定或都不設定，保持不變
-    if (old_set == new_set) {
-        return new_val;
-    }
-
-    // 計算淡入淡出的alpha值 (0-255)
-    int alpha = (step * 255) / ANIMATION_STEPS;
-
-    if (new_set && !old_set) {
-        // 淡入：從透明到不透明
-        return (new_val * alpha) / 255;
-    } else {
-        // 淡出：從不透明到透明
-        return (old_val * (255 - alpha)) / 255;
     }
 }
 
@@ -178,59 +175,79 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
     if (!anim->animating || !layer->bitmap) {
         return false;
     }
-
-    if (anim->step >= ANIMATION_STEPS) {
+    
+    if (anim->step > ANIMATION_STEPS) {
         anim->animating = false;
         return false;
     }
-
+    
     uint8_t *current = gbitmap_get_data(layer->bitmap);
     if (!current || !anim->old_pixels || !anim->new_pixels) {
         anim->animating = false;
         return false;
     }
-
-    int bytes_per_row = gbitmap_get_bytes_per_row(layer->bitmap);
-
+    
+    int bytes_per_row = anim->bytes_per_row;
+    
+    // 如果已經完成動畫，確保顯示最終狀態
+    if (anim->step == ANIMATION_STEPS) {
+        int total_bytes = bytes_per_row * anim->size.h;
+        memcpy(current, anim->new_pixels, total_bytes);
+        anim->step++;
+        layer_mark_dirty(bitmap_layer_get_layer(layer->layer));
+        return false;
+    }
+    
+    // 使用固定的隨機種子來確保每個像素的抖動模式一致
+    // 使用更好的偽隨機分佈
+    static const uint8_t dither_matrix[8][8] = {
+        { 0, 32,  8, 40,  2, 34, 10, 42},
+        {48, 16, 56, 24, 50, 18, 58, 26},
+        {12, 44,  4, 36, 14, 46,  6, 38},
+        {60, 28, 52, 20, 62, 30, 54, 22},
+        { 3, 35, 11, 43,  1, 33,  9, 41},
+        {51, 19, 59, 27, 49, 17, 57, 25},
+        {15, 47,  7, 39, 13, 45,  5, 37},
+        {63, 31, 55, 23, 61, 29, 53, 21}
+    };
+    
     // 逐像素混合
     for (int y = 0; y < anim->size.h; y++) {
         for (int x = 0; x < anim->size.w; x++) {
             int byte_idx = y * bytes_per_row + (x / 8);
             int bit_idx = x % 8;
             uint8_t mask = 1 << bit_idx;
-
+            
             bool old_set = (anim->old_pixels[byte_idx] & mask) != 0;
             bool new_set = (anim->new_pixels[byte_idx] & mask) != 0;
-
-            // 對於1位深度的圖像，只能設定或清除
-            // 我們使用抖動來模擬灰階
+            
+            bool show = false;
+            
             if (old_set == new_set) {
                 // 共同像素，保持不變
-                if (new_set) {
-                    current[byte_idx] |= mask;
-                } else {
-                    current[byte_idx] &= ~mask;
-                }
+                show = new_set;
             } else {
-                // 使用step來決定是否顯示（模擬淡入淡出）
-                bool show = false;
+                // 使用抖動矩陣來決定是否顯示像素
+                int threshold = dither_matrix[y % 8][x % 8];
+                int alpha = (anim->step * 64) / ANIMATION_STEPS;  // 0-64
+                
                 if (new_set && !old_set) {
-                    // 淡入：隨step增加，顯示機率增加
-                    show = (anim->step * 10) > ((x + y) % 100);
+                    // 淡入：當 alpha > threshold 時顯示
+                    show = (alpha > threshold);
                 } else {
-                    // 淡出：隨step增加，顯示機率減少
-                    show = ((ANIMATION_STEPS - anim->step) * 10) > ((x + y) % 100);
+                    // 淡出：當 (64 - alpha) > threshold 時顯示
+                    show = ((64 - alpha) > threshold);
                 }
-
-                if (show) {
-                    current[byte_idx] |= mask;
-                } else {
-                    current[byte_idx] &= ~mask;
-                }
+            }
+            
+            if (show) {
+                current[byte_idx] |= mask;
+            } else {
+                current[byte_idx] &= ~mask;
             }
         }
     }
-
+    
     anim->step++;
     layer_mark_dirty(bitmap_layer_get_layer(layer->layer));
     return true;
@@ -241,7 +258,7 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
  */
 static void animation_timer_callback(void *data) {
     bool any_animating = false;
-
+    
     // 更新所有動畫
     any_animating |= update_animation_frame(&s_hour_layers[0], &s_hour_anims[0]);
     any_animating |= update_animation_frame(&s_hour_layers[1], &s_hour_anims[1]);
@@ -252,7 +269,7 @@ static void animation_timer_callback(void *data) {
     any_animating |= update_animation_frame(&s_day_layers[0], &s_day_anims[0]);
     any_animating |= update_animation_frame(&s_day_layers[1], &s_day_anims[1]);
     any_animating |= update_animation_frame(&s_week_layer, &s_week_anim);
-
+    
     // 如果還有動畫在進行，繼續計時
     if (any_animating) {
         s_animation_timer = app_timer_register(ANIMATION_INTERVAL_MS, animation_timer_callback, NULL);
@@ -276,32 +293,52 @@ static void start_animation_timer() {
 /**
  * 設定顯示圖層的點陣圖（帶動畫）
  */
+/**
+ * 設定顯示圖層的點陣圖（帶動畫）- 已修正版本
+ */
 static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id,
                                                AnimationState *anim, GSize size) {
+    // 【捷徑 1: 效率提升】
+    // 如果要顯示的資源ID和目前的一樣，代表畫面無須更新，直接返回。
+    if (display_layer->current_resource_id == resource_id) {
+        return;
+    }
+
     GBitmap *old_bitmap = display_layer->bitmap;
-    GBitmap *new_bitmap = NULL;
+    GBitmap *new_bitmap = (resource_id != 0) ? gbitmap_create_with_resource(resource_id) : NULL;
 
-    if (resource_id != 0) {
-        new_bitmap = gbitmap_create_with_resource(resource_id);
-    }
+    bool animation_will_run = false;
 
-    // 初始化動畫
-    if (anim) {
+    // 嘗試啟動動畫
+    if (anim && old_bitmap && new_bitmap) {
         init_animation(anim, old_bitmap, new_bitmap, size);
+
+        // 【捷徑 2: 穩健性增強】
+        // 檢查 init_animation 是否成功 (例如，malloc 是否成功)
+        if (anim->animating) {
+            // 動畫初始化成功
+            animation_will_run = true;
+            
+            // 我們只需要 new_bitmap 的像素數據，現在可以銷毀它了
+            gbitmap_destroy(new_bitmap);
+            
+            // 讓動畫在 old_bitmap 上進行繪製
+        }
+        // 如果 anim->animating 為 false，代表初始化失敗，將會走下面的非動畫路徑
     }
 
-    // 更新bitmap
-    if (display_layer->old_bitmap) {
-        gbitmap_destroy(display_layer->old_bitmap);
+    // 如果動畫無法運行 (條件不滿足 或 初始化失敗)，則執行無動畫的直接替換
+    if (!animation_will_run) {
+        // 這是備用方案 (Fallback) 或 正常無動畫更新
+        if (old_bitmap) {
+            gbitmap_destroy(old_bitmap);
+        }
+        display_layer->bitmap = new_bitmap;
+        bitmap_layer_set_bitmap(display_layer->layer, new_bitmap);
     }
-    display_layer->old_bitmap = old_bitmap; // a bit confusing, but old_bitmap is the one to be replaced
-
-    display_layer->bitmap = new_bitmap;
-    bitmap_layer_set_bitmap(display_layer->layer, new_bitmap);
-
-    if (old_bitmap == new_bitmap) {
-        gbitmap_destroy(new_bitmap);
-    }
+    
+    // 無論是哪種路徑，最後都要更新當前顯示的 resource_id
+    display_layer->current_resource_id = resource_id;
 }
 
 static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id) {
@@ -367,10 +404,10 @@ static void update_time() {
         minute_tens_res_id = TIME_LOWERCASE_ONES_RESOURCES[m1];
         minute_ones_res_id = TIME_LOWERCASE_ONES_RESOURCES[m2];
     }
-
+    
     set_display_layer_bitmap_animated(&s_minute_layers[0], minute_tens_res_id, &s_minute_anims[0], TIME_IMAGE_SIZE);
     set_display_layer_bitmap_animated(&s_minute_layers[1], minute_ones_res_id, &s_minute_anims[1], TIME_IMAGE_SIZE);
-
+    
     // 啟動動畫
     start_animation_timer();
 }
@@ -434,16 +471,13 @@ static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *disp
     bitmap_layer_set_compositing_mode(display_layer->layer, GCompOpSet);
     layer_add_child(parent, bitmap_layer_get_layer(display_layer->layer));
     display_layer->bitmap = NULL;
-    display_layer->old_bitmap = NULL;
+    display_layer->current_resource_id = 0;
 }
 
 static void destroy_display_layer(DisplayLayer *display_layer) {
     if (display_layer) {
         if (display_layer->bitmap) {
             gbitmap_destroy(display_layer->bitmap);
-        }
-        if (display_layer->old_bitmap) {
-            gbitmap_destroy(display_layer->old_bitmap);
         }
         if (display_layer->layer) {
             bitmap_layer_destroy(display_layer->layer);
@@ -479,7 +513,7 @@ static void main_window_load(Window *window) {
     set_display_layer_bitmap(&s_yue_layer, RESOURCE_ID_IMG_YUE);
     set_display_layer_bitmap(&s_ri_layer, RESOURCE_ID_IMG_RI);
     set_display_layer_bitmap(&s_zhou_layer, RESOURCE_ID_IMG_ZHOU);
-
+    
     // 初始化動畫狀態
     memset(&s_hour_anims, 0, sizeof(s_hour_anims));
     memset(&s_minute_anims, 0, sizeof(s_minute_anims));
@@ -494,18 +528,18 @@ static void main_window_unload(Window *window) {
         app_timer_cancel(s_animation_timer);
         s_animation_timer = NULL;
     }
-
+    
     // 清理動畫數據
     AnimationState* all_anims[] = {
         &s_hour_anims[0], &s_hour_anims[1], &s_minute_anims[0], &s_minute_anims[1],
         &s_month_anims[0], &s_month_anims[1], &s_day_anims[0], &s_day_anims[1], &s_week_anim
     };
-
+    
     for (size_t i = 0; i < ARRAY_LENGTH(all_anims); i++) {
         if (all_anims[i]->old_pixels) free(all_anims[i]->old_pixels);
         if (all_anims[i]->new_pixels) free(all_anims[i]->new_pixels);
     }
-
+    
     DisplayLayer* all_layers[] = {
         &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
         &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
