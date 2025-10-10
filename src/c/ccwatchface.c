@@ -59,8 +59,8 @@ static AppTimer *s_animation_timer = NULL;
 #define TIME_ROW2_Y (TIME_ROW1_Y + TIME_IMAGE_SIZE.h + 8)
 #define DATE_ROW_Y (TIME_ROW2_Y + TIME_IMAGE_SIZE.h + 7)
 
-#define ANIMATION_STEPS 10
-#define ANIMATION_INTERVAL_MS 10  // 10ms * 10 steps = 100ms total
+#define ANIMATION_STEPS 2
+#define ANIMATION_INTERVAL_MS 40  // 40ms * 2 steps = 80ms total
 
 // ==================== 圖片資源映射表 ====================
 
@@ -141,7 +141,7 @@ static void init_animation(AnimationState *anim, GBitmap *old_bmp, GBitmap *new_
     }
     
     anim->size = size;
-    anim->step = 0;
+    anim->step = 1;
     anim->animating = false;
     anim->bytes_per_row = 0;
     
@@ -198,19 +198,6 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
         return false;
     }
     
-    // 使用固定的隨機種子來確保每個像素的抖動模式一致
-    // 使用更好的偽隨機分佈
-    static const uint8_t dither_matrix[8][8] = {
-        { 0, 32,  8, 40,  2, 34, 10, 42},
-        {48, 16, 56, 24, 50, 18, 58, 26},
-        {12, 44,  4, 36, 14, 46,  6, 38},
-        {60, 28, 52, 20, 62, 30, 54, 22},
-        { 3, 35, 11, 43,  1, 33,  9, 41},
-        {51, 19, 59, 27, 49, 17, 57, 25},
-        {15, 47,  7, 39, 13, 45,  5, 37},
-        {63, 31, 55, 23, 61, 29, 53, 21}
-    };
-    
     // 逐像素混合
     for (int y = 0; y < anim->size.h; y++) {
         for (int x = 0; x < anim->size.w; x++) {
@@ -227,17 +214,8 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
                 // 共同像素，保持不變
                 show = new_set;
             } else {
-                // 使用抖動矩陣來決定是否顯示像素
-                int threshold = dither_matrix[y % 8][x % 8];
-                int alpha = (anim->step * 64) / ANIMATION_STEPS;  // 0-64
-                
-                if (new_set && !old_set) {
-                    // 淡入：當 alpha > threshold 時顯示
-                    show = (alpha > threshold);
-                } else {
-                    // 淡出：當 (64 - alpha) > threshold 時顯示
-                    show = ((64 - alpha) > threshold);
-                }
+                // 使用棋盤格模式來決定像素是否顯示
+                show = ((x + y) % 2 == 0);
             }
             
             if (show) {
