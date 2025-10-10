@@ -198,19 +198,6 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
         return false;
     }
     
-    // 使用固定的隨機種子來確保每個像素的抖動模式一致
-    // 使用更好的偽隨機分佈
-    static const uint8_t dither_matrix[8][8] = {
-        { 0, 32,  8, 40,  2, 34, 10, 42},
-        {48, 16, 56, 24, 50, 18, 58, 26},
-        {12, 44,  4, 36, 14, 46,  6, 38},
-        {60, 28, 52, 20, 62, 30, 54, 22},
-        { 3, 35, 11, 43,  1, 33,  9, 41},
-        {51, 19, 59, 27, 49, 17, 57, 25},
-        {15, 47,  7, 39, 13, 45,  5, 37},
-        {63, 31, 55, 23, 61, 29, 53, 21}
-    };
-    
     // 逐像素混合
     for (int y = 0; y < anim->size.h; y++) {
         for (int x = 0; x < anim->size.w; x++) {
@@ -227,9 +214,8 @@ static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
                 // 共同像素，保持不變
                 show = new_set;
             } else {
-                // 對於任何變化的像素，都套用50%的抖動效果
-                int threshold = dither_matrix[y % 8][x % 8];
-                show = (32 > threshold);
+                // 使用棋盤格模式來決定像素是否顯示
+                show = ((x + y) % 2 == 0);
             }
             
             if (show) {
