@@ -21,6 +21,10 @@ def configure(ctx):
     Universal configuration: add your change prior to calling ctx.load('pebble_sdk').
     """
     ctx.load('pebble_sdk')
+    for platform in ctx.env.TARGET_PLATFORMS:
+        env = ctx.all_envs[platform]
+        if '-Werror' in env['CFLAGS']:
+            env['CFLAGS'].remove('-Werror')
 
 
 def build(ctx):

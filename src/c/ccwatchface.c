@@ -2,11 +2,16 @@
 
 // ==================== 結構定義 ====================
 
-// 顯示圖層結構，包含點陣圖層和點陣圖本身
+// AnimationLayer 結構定義
 typedef struct {
-    BitmapLayer *layer;
-    GBitmap *bitmap;
-} DisplayLayer;
+    Layer *layer;
+    GBitmap *old_bitmap;
+    GBitmap *new_bitmap;
+    Animation *animation;
+    AnimationImplementation anim_impl;
+    AnimationProgress anim_progress;
+    uint32_t current_resource_id;
+} AnimationLayer;
 
 // ==================== 全域變數宣告 ====================
 
@@ -14,18 +19,41 @@ typedef struct {
 static Window *s_main_window;
 
 // 時間顯示圖層 (小時十位/個位, 分鐘十位/個位)
-static DisplayLayer s_hour_layers[2];
-static DisplayLayer s_minute_layers[2];
+static AnimationLayer s_hour_layers[2];
+static AnimationLayer s_minute_layers[2];
 
 // 日期顯示圖層 (月份十位/個位, 日期十位/個位, 星期)
-static DisplayLayer s_month_layers[2];
-static DisplayLayer s_day_layers[2];
-static DisplayLayer s_week_layer;
+static AnimationLayer s_month_layers[2];
+static AnimationLayer s_day_layers[2];
+static AnimationLayer s_week_layer;
 
 // 固定文字圖層 ("月", "日", "週")
-static DisplayLayer s_yue_layer;
-static DisplayLayer s_ri_layer;
-static DisplayLayer s_zhou_layer;
+static AnimationLayer s_yue_layer;
+static AnimationLayer s_ri_layer;
+static AnimationLayer s_zhou_layer;
+
+// 全域 AnimationLayer 指標陣列
+static AnimationLayer* s_all_layers[12];
+static int s_all_layers_count = 0;
+
+static AnimationLayer* get_anim_layer_from_layer(Layer *layer) {
+    for (int i = 0; i < s_all_layers_count; i++) {
+        if (s_all_layers[i] && s_all_layers[i]->layer == layer) {
+            return s_all_layers[i];
+        }
+    }
+    return NULL;
+}
+
+// Helper to find AnimationLayer from Animation
+static AnimationLayer* get_anim_layer_from_animation(Animation *animation) {
+    for (int i = 0; i < s_all_layers_count; i++) {
+        if (s_all_layers[i] && s_all_layers[i]->animation == animation) {
+            return s_all_layers[i];
+        }
+    }
+    return NULL;
+}
 
 // ==================== 螢幕佈局常數定義 ====================
 
@@ -41,12 +69,16 @@ static DisplayLayer s_zhou_layer;
 
 // ==================== 函式原型宣告 ====================
 
+static void layer_update_proc(Layer *layer, GContext *ctx);
+static void animation_update(Animation *animation, const AnimationProgress progress);
+static void animation_teardown(Animation *animation);
+
 static void update_time();
 static void update_date(struct tm *tick_time);
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed);
-static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id);
-static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *display_layer);
-static void destroy_display_layer(DisplayLayer *display_layer);
+static void animation_layer_update(AnimationLayer *anim_layer, uint32_t new_resource_id);
+static void create_animation_layer(Layer *parent, GRect bounds, AnimationLayer *anim_layer);
+static void destroy_animation_layer(AnimationLayer *anim_layer);
 
 // ==================== 圖片資源映射表 ====================
 
@@ -135,23 +167,144 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 
 // ==================== 工具函式 ====================
 
-/**
- * 設定顯示圖層的點陣圖
- * @param display_layer 指向 DisplayLayer 結構的指標
- * @param resource_id 圖片資源ID (若為0則清除圖片)
- */
-static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id) {
-    if (display_layer->bitmap) {
-        gbitmap_destroy(display_layer->bitmap);
-        display_layer->bitmap = NULL;
+static void animation_update(Animation *animation, const AnimationProgress progress) {
+    AnimationLayer *anim_layer = get_anim_layer_from_animation(animation);
+    if (!anim_layer) return;
+
+    anim_layer->anim_progress = progress;
+    layer_mark_dirty(anim_layer->layer);
+}
+
+static void animation_teardown(Animation *animation) {
+    AnimationLayer *anim_layer = get_anim_layer_from_animation(animation);
+    if (!anim_layer) return;
+
+    if (anim_layer->old_bitmap) {
+        gbitmap_destroy(anim_layer->old_bitmap);
+    }
+    anim_layer->old_bitmap = anim_layer->new_bitmap;
+    anim_layer->new_bitmap = NULL;
+    anim_layer->animation = NULL; // The animation is destroyed automatically
+}
+
+static void animation_layer_update(AnimationLayer *anim_layer, uint32_t new_resource_id) {
+    if (anim_layer->current_resource_id == new_resource_id) {
+        return;
     }
 
-    if (resource_id != 0) {
-        display_layer->bitmap = gbitmap_create_with_resource(resource_id);
-        bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
-    } else {
-        bitmap_layer_set_bitmap(display_layer->layer, NULL);
+    if (anim_layer->animation && animation_is_scheduled(anim_layer->animation)) {
+        animation_unschedule(anim_layer->animation);
     }
+
+    if (anim_layer->new_bitmap) {
+        gbitmap_destroy(anim_layer->new_bitmap);
+        anim_layer->new_bitmap = NULL;
+    }
+
+    if (new_resource_id != 0) {
+        anim_layer->new_bitmap = gbitmap_create_with_resource(new_resource_id);
+    }
+
+    anim_layer->current_resource_id = new_resource_id;
+
+    if (!anim_layer->old_bitmap && anim_layer->new_bitmap) {
+         if (anim_layer->old_bitmap) gbitmap_destroy(anim_layer->old_bitmap);
+         anim_layer->old_bitmap = anim_layer->new_bitmap;
+         anim_layer->new_bitmap = NULL;
+         layer_mark_dirty(anim_layer->layer);
+         return;
+    }
+
+    anim_layer->anim_impl = (AnimationImplementation){
+        .update = animation_update,
+        .teardown = animation_teardown
+    };
+
+    if (anim_layer->animation) {
+        animation_destroy(anim_layer->animation);
+    }
+    anim_layer->animation = animation_create();
+    animation_set_duration(anim_layer->animation, 100);
+    animation_set_curve(anim_layer->animation, AnimationCurveLinear);
+    animation_set_implementation(anim_layer->animation, &anim_layer->anim_impl);
+    animation_schedule(anim_layer->animation);
+}
+
+static void layer_update_proc(Layer *layer, GContext *ctx) {
+    AnimationLayer *anim_layer = get_anim_layer_from_layer(layer);
+    if (!anim_layer) return;
+
+    GBitmap *old_b = anim_layer->old_bitmap;
+    GBitmap *new_b = anim_layer->new_bitmap;
+    GRect bounds = layer_get_bounds(layer);
+
+    // If animation is done, just draw the current bitmap
+    if (anim_layer->anim_progress == ANIMATION_NORMALIZED_MAX) {
+        if (old_b) {
+            graphics_context_set_compositing_mode(ctx, GCompOpSet);
+            graphics_draw_bitmap_in_rect(ctx, old_b, (GRect){ .origin = {0,0}, .size = bounds.size });
+        }
+        return;
+    }
+
+    // Capture framebuffer
+    GBitmap *fb = graphics_capture_frame_buffer(ctx);
+    if (!fb) {
+        // Fallback for when framebuffer is not available (e.g. screenshot)
+        if (anim_layer->old_bitmap) {
+            graphics_draw_bitmap_in_rect(ctx, anim_layer->old_bitmap, (GRect){ .origin = {0,0}, .size = bounds.size });
+        }
+        return;
+    }
+
+    for (uint16_t y = 0; y < bounds.size.h; y++) {
+        GBitmapDataRowInfo old_row = old_b ? gbitmap_get_data_row_info(old_b, y) : (GBitmapDataRowInfo){ .min_x = 255 };
+        GBitmapDataRowInfo new_row = new_b ? gbitmap_get_data_row_info(new_b, y) : (GBitmapDataRowInfo){ .min_x = 255 };
+        GBitmapDataRowInfo fb_row = gbitmap_get_data_row_info(fb, y + bounds.origin.y);
+
+        for (int x = 0; x < bounds.size.w; x++) {
+            bool old_pixel = false;
+            if (old_b) {
+                int min_x = old_row.min_x;
+                int max_x = old_row.max_x;
+                if (x >= min_x && x <= max_x) {
+                    if ((old_row.data[x / 8] >> (x % 8)) & 1) {
+                        old_pixel = true;
+                    }
+                }
+            }
+
+            bool new_pixel = false;
+            if (new_b) {
+                int min_x = new_row.min_x;
+                int max_x = new_row.max_x;
+                if (x >= min_x && x <= max_x) {
+                    if ((new_row.data[x / 8] >> (x % 8)) & 1) {
+                        new_pixel = true;
+                    }
+                }
+            }
+
+            bool set_pixel = false;
+            if (old_pixel && new_pixel) {
+                set_pixel = true;
+            } else if (old_pixel) {
+                set_pixel = ((uint32_t)rand() % ANIMATION_NORMALIZED_MAX > anim_layer->anim_progress);
+            } else if (new_pixel) {
+                set_pixel = ((uint32_t)rand() % ANIMATION_NORMALIZED_MAX < anim_layer->anim_progress);
+            }
+
+            int byte = (x + bounds.origin.x) / 8;
+            int bit = (x + bounds.origin.x) % 8;
+            if (set_pixel) {
+                fb_row.data[byte] |= (1 << bit);
+            } else {
+                fb_row.data[byte] &= ~(1 << bit);
+            }
+        }
+    }
+
+    graphics_release_frame_buffer(ctx, fb);
 }
 
 // ==================== 時間更新邏輯 ====================
@@ -181,8 +334,8 @@ static void update_time() {
             hour_tens_res_id = TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
         }
     }
-    set_display_layer_bitmap(&s_hour_layers[0], hour_tens_res_id);
-    set_display_layer_bitmap(&s_hour_layers[1], hour_ones_res_id);
+    animation_layer_update(&s_hour_layers[0], hour_tens_res_id);
+    animation_layer_update(&s_hour_layers[1], hour_ones_res_id);
     
     // --- 分鐘處理 ---
     int minute = tick_time->tm_min;
@@ -208,8 +361,8 @@ static void update_time() {
         minute_tens_res_id = TIME_LOWERCASE_ONES_RESOURCES[m1];
         minute_ones_res_id = TIME_LOWERCASE_ONES_RESOURCES[m2];
     }
-    set_display_layer_bitmap(&s_minute_layers[0], minute_tens_res_id);
-    set_display_layer_bitmap(&s_minute_layers[1], minute_ones_res_id);
+    animation_layer_update(&s_minute_layers[0], minute_tens_res_id);
+    animation_layer_update(&s_minute_layers[1], minute_ones_res_id);
 }
 
 // ==================== 日期更新邏輯 ====================
@@ -251,11 +404,11 @@ static void update_date(struct tm *tick_time) {
     // --- 星期處理 ---
     uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_RI : DATE_LOWERCASE_ONES_RESOURCES[week];
     
-    set_display_layer_bitmap(&s_month_layers[0], month_tens_res_id);
-    set_display_layer_bitmap(&s_month_layers[1], month_ones_res_id);
-    set_display_layer_bitmap(&s_day_layers[0], day_tens_res_id);
-    set_display_layer_bitmap(&s_day_layers[1], day_ones_res_id);
-    set_display_layer_bitmap(&s_week_layer, week_res_id);
+    animation_layer_update(&s_month_layers[0], month_tens_res_id);
+    animation_layer_update(&s_month_layers[1], month_ones_res_id);
+    animation_layer_update(&s_day_layers[0], day_tens_res_id);
+    animation_layer_update(&s_day_layers[1], day_ones_res_id);
+    animation_layer_update(&s_week_layer, week_res_id);
 }
 
 // ==================== 事件處理 ====================
@@ -278,32 +431,32 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 // ==================== UI 畫面建構 ====================
 
-/**
- * 建立並設定 DisplayLayer
- * @param parent 父圖層
- * @param bounds 圖層的位置和大小
- * @param display_layer 要初始化的 DisplayLayer 結構指標
- */
-static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *display_layer) {
-    display_layer->layer = bitmap_layer_create(bounds);
-    bitmap_layer_set_background_color(display_layer->layer, GColorClear);
-    bitmap_layer_set_compositing_mode(display_layer->layer, GCompOpSet);
-    layer_add_child(parent, bitmap_layer_get_layer(display_layer->layer));
-    display_layer->bitmap = NULL; // 初始化點陣圖指標
+static void create_animation_layer(Layer *parent, GRect bounds, AnimationLayer *anim_layer) {
+    anim_layer->layer = layer_create(bounds);
+    layer_set_update_proc(anim_layer->layer, layer_update_proc);
+    layer_add_child(parent, anim_layer->layer);
+
+    anim_layer->old_bitmap = NULL;
+    anim_layer->new_bitmap = NULL;
+    anim_layer->animation = NULL;
+    anim_layer->current_resource_id = 0;
+    anim_layer->anim_progress = ANIMATION_NORMALIZED_MAX;
+
+    // Add to the global array
+    if (s_all_layers_count < (int)ARRAY_LENGTH(s_all_layers)) {
+        s_all_layers[s_all_layers_count++] = anim_layer;
+    }
 }
 
-/**
- * 銷毀 DisplayLayer
- * @param display_layer 要銷毀的 DisplayLayer 結構指標
- */
-static void destroy_display_layer(DisplayLayer *display_layer) {
-    if (display_layer) {
-        if (display_layer->bitmap) {
-            gbitmap_destroy(display_layer->bitmap);
+static void destroy_animation_layer(AnimationLayer *anim_layer) {
+    if (anim_layer) {
+        if (anim_layer->animation) {
+            animation_unschedule(anim_layer->animation);
+            animation_destroy(anim_layer->animation);
         }
-        if (display_layer->layer) {
-            bitmap_layer_destroy(display_layer->layer);
-        }
+        if (anim_layer->old_bitmap) gbitmap_destroy(anim_layer->old_bitmap);
+        if (anim_layer->new_bitmap) gbitmap_destroy(anim_layer->new_bitmap);
+        if (anim_layer->layer) layer_destroy(anim_layer->layer);
     }
 }
 
@@ -316,33 +469,33 @@ static void main_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
 
     // 建立時間顯示圖層 (2x2 格子)
-    create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[0]);
-    create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[1]);
-    create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[0]);
-    create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[1]);
+    create_animation_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[0]);
+    create_animation_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[1]);
+    create_animation_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[0]);
+    create_animation_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[1]);
 
     // 建立日期顯示圖層 (水平排列)
     int x_pos = 8;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[0]);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[0]);
     x_pos += DATE_IMAGE_SIZE.w + 1;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[1]);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[1]);
     x_pos += DATE_IMAGE_SIZE.w + 1;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_yue_layer);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_yue_layer);
     x_pos += DATE_IMAGE_SIZE.w + 1;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[0]);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[0]);
     x_pos += DATE_IMAGE_SIZE.w + 1;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[1]);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[1]);
     x_pos += DATE_IMAGE_SIZE.w + 1;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_ri_layer);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_ri_layer);
     x_pos += DATE_IMAGE_SIZE.w + 2;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_zhou_layer);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_zhou_layer);
     x_pos += DATE_IMAGE_SIZE.w + 1;
-    create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_week_layer);
+    create_animation_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_week_layer);
 
-    // 載入固定文字圖片
-    set_display_layer_bitmap(&s_yue_layer, RESOURCE_ID_IMG_YUE);
-    set_display_layer_bitmap(&s_ri_layer, RESOURCE_ID_IMG_RI);
-    set_display_layer_bitmap(&s_zhou_layer, RESOURCE_ID_IMG_ZHOU);
+    // 載入固定文字圖片 (這些不需要動畫)
+    animation_layer_update(&s_yue_layer, RESOURCE_ID_IMG_YUE);
+    animation_layer_update(&s_ri_layer, RESOURCE_ID_IMG_RI);
+    animation_layer_update(&s_zhou_layer, RESOURCE_ID_IMG_ZHOU);
 }
 
 /**
@@ -351,8 +504,8 @@ static void main_window_load(Window *window) {
  * @param window 主視窗
  */
 static void main_window_unload(Window *window) {
-    // 收集所有 DisplayLayer 指標
-    DisplayLayer* all_layers[] = {
+    // 收集所有 AnimationLayer 指標
+    AnimationLayer* all_layers[] = {
         &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
         &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
         &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
@@ -360,7 +513,7 @@ static void main_window_unload(Window *window) {
 
     // 迭代並銷毀所有圖層和點陣圖
     for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
-        destroy_display_layer(all_layers[i]);
+        destroy_animation_layer(all_layers[i]);
     }
 }
 
@@ -371,6 +524,9 @@ static void main_window_unload(Window *window) {
  * 建立視窗、訂閱時間服務,並進行首次時間更新
  */
 static void init() {
+    // 初始化隨機數生成器
+    srand(time(NULL));
+
     // 建立主視窗
     s_main_window = window_create();
     // 設定視窗的載入與卸載處理函式
