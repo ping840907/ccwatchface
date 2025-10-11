@@ -23,8 +23,6 @@ typedef struct {
 
 // UI 視窗元件
 static Window *s_main_window;
-static Layer *s_hour_background_layer;
-static Layer *s_divider_layer;
 static GColor s_minute_color;
 
 // 時間顯示圖層 (小時十位/個位, 分鐘十位/個位)
@@ -277,22 +275,15 @@ static void start_animation_timer() {
 static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
     if (!bitmap) return;
 
-    // 如果是小時圖層，反轉顏色 (黑 -> 白)
-    if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
-        uint8_t *data = gbitmap_get_data(bitmap);
-        int bytes = gbitmap_get_bytes_per_row(bitmap) * gbitmap_get_bounds(bitmap).size.h;
-        for (int i = 0; i < bytes; i++) {
-            data[i] = ~data[i];
-        }
-    } else if (display_layer == &s_minute_layers[1]) {
+    // 如果是分鐘第二個字圖層，將黑色換成使用者設定的顏色
+    if (display_layer == &s_minute_layers[1]) {
         GColor *palette = gbitmap_get_palette(bitmap);
         if (palette) {
-            // 我們將黑色替換成選擇的顏色
             for (int i = 0; i < 2; i++) {
-              if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = s_minute_color;
-                break;
-              }
+                if (gcolor_equal(palette[i], GColorBlack)) {
+                    palette[i] = s_minute_color;
+                    break;
+                }
             }
         }
     }
@@ -502,34 +493,13 @@ static void destroy_display_layer(DisplayLayer *display_layer) {
     }
 }
 
-static void hour_background_update_proc(Layer *layer, GContext *ctx) {
-    graphics_context_set_fill_color(ctx, GColorBlack);
-    graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
-}
-
-static void divider_update_proc(Layer *layer, GContext *ctx) {
-    graphics_context_set_stroke_color(ctx, GColorBlack);
-    graphics_draw_line(ctx, GPoint(0, 0), GPoint(layer_get_bounds(layer).size.w, 0));
-}
-
 static void main_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
-
-    // 建立小時背景 Layer (修正尺寸和順序)
-    s_hour_background_layer = layer_create(GRect(8, 8, 184, 88));
-    layer_set_update_proc(s_hour_background_layer, hour_background_update_proc);
-    layer_add_child(window_layer, s_hour_background_layer);
 
     create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[0]);
     create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[1]);
     create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[0]);
     create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[1]);
-
-    // 建立分隔線 Layer
-    int divider_y = TIME_ROW2_Y + TIME_IMAGE_SIZE.h + (DATE_ROW_Y - (TIME_ROW2_Y + TIME_IMAGE_SIZE.h)) / 2;
-    s_divider_layer = layer_create(GRect(8, divider_y, SCREEN_WIDTH - 16, 1));
-    layer_set_update_proc(s_divider_layer, divider_update_proc);
-    layer_add_child(window_layer, s_divider_layer);
 
     int x_pos = 8;
     create_display_layer(window_layer, GRect(x_pos, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[0]);
@@ -609,9 +579,6 @@ static void main_window_unload(Window *window) {
     for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
         destroy_display_layer(all_layers[i]);
     }
-
-    layer_destroy(s_hour_background_layer);
-    layer_destroy(s_divider_layer);
 }
 
 // ==================== 應用程式生命週期 ====================
