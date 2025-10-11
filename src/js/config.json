@@ -1,0 +1,33 @@
+[
+  {
+    "type": "heading",
+    "defaultValue": "CCWatchface Settings"
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Colors"
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_MINUTE_COLOR",
+        "defaultValue": "005500", // Dark Green
+        "label": "Accent Color",
+        "sunlight": false,
+        "options": [
+          { "label": "Dark Green", "value": "005500" },
+          { "label": "Black", "value": "000000" },
+          { "label": "White", "value": "FFFFFF" },
+          { "label": "Red", "value": "FF0000" },
+          { "label": "Blue", "value": "0000FF" }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "submit",
+    "defaultValue": "Save Settings"
+  }
+]

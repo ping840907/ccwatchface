@@ -17,8 +17,11 @@
     "watchapp": {
       "watchface": true
     },
-    "messageKeys": [
-      "dummy"
+    "messageKeys": {
+      "KEY_MINUTE_COLOR": 0
+    },
+    "capabilities": [
+      "configurable"
     ],
     "resources": {
       "media": [

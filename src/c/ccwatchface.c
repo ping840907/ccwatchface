@@ -23,6 +23,7 @@ typedef struct {
 
 // UI 視窗元件
 static Window *s_main_window;
+static GColor s_accent_color;
 
 // 時間顯示圖層 (小時十位/個位, 分鐘十位/個位)
 static DisplayLayer s_hour_layers[2];
@@ -269,6 +270,35 @@ static void start_animation_timer() {
 // ==================== 工具函式 ====================
 
 /**
+ * 根據圖層類型修改點陣圖的調色盤
+ */
+static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
+    if (!bitmap) return;
+
+    GColor *palette = gbitmap_get_palette(bitmap);
+    if (!palette) return;
+
+    // 如果是小時圖層，將紅色(#FF0000)替換為主題色
+    if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
+        for (int i = 0; i < 8; i++) { // Assume a safe maximum of 8 colors
+            if (gcolor_equal(palette[i], GColorRed)) {
+                palette[i] = s_accent_color;
+                break;
+            }
+        }
+    }
+    // 如果是分鐘第二個字圖層，將黑色換成主題色
+    else if (display_layer == &s_minute_layers[1]) {
+        for (int i = 0; i < 2; i++) { // These are known to be 1-bit
+            if (gcolor_equal(palette[i], GColorBlack)) {
+                palette[i] = s_accent_color;
+                break;
+            }
+        }
+    }
+}
+
+/**
  * 設定顯示圖層的點陣圖（帶動畫）
  */
 static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id,
@@ -282,10 +312,23 @@ static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint3
     GBitmap *old_bitmap = display_layer->bitmap;
     GBitmap *new_bitmap = (resource_id != 0) ? gbitmap_create_with_resource(resource_id) : NULL;
 
+    // 在動畫之前或設定之前，客製化點陣圖
+    customize_bitmap(display_layer, new_bitmap);
+
     bool animation_will_run = false;
 
     // 嘗試啟動動畫
     if (anim && old_bitmap && new_bitmap) {
+        // 修正動畫顏色問題：在動畫開始前，將新圖片的調色盤複製到舊圖片上
+        if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1] || display_layer == &s_minute_layers[1]) {
+            GColor *old_palette = gbitmap_get_palette(old_bitmap);
+            GColor *new_palette = gbitmap_get_palette(new_bitmap);
+            if (old_palette && new_palette) {
+                // 假設小時圖層最多8色，分鐘圖層2色，取最大值
+                memcpy(old_palette, new_palette, sizeof(GColor) * 8);
+            }
+        }
+
         init_animation(anim, old_bitmap, new_bitmap, size);
 
         // 【捷徑 2: 穩健性增強】
@@ -497,6 +540,28 @@ static void main_window_load(Window *window) {
     memset(&s_week_anim, 0, sizeof(s_week_anim));
 }
 
+static void inbox_received_handler(DictionaryIterator *iter, void *context) {
+    Tuple *accent_color_t = dict_find(iter, MESSAGE_KEY_KEY_MINUTE_COLOR);
+    if (accent_color_t) {
+        s_accent_color = GColorFromHEX(accent_color_t->value->int32);
+
+        // 重新繪製時間，讓顏色生效
+        update_time();
+    }
+}
+
+static void inbox_dropped_handler(AppMessageResult reason, void *context) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+static void outbox_failed_handler(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_handler(DictionaryIterator *iterator, void *context) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
 static void main_window_unload(Window *window) {
     // 取消動畫計時器
     if (s_animation_timer) {
@@ -529,6 +594,8 @@ static void main_window_unload(Window *window) {
 // ==================== 應用程式生命週期 ====================
 
 static void init() {
+    s_accent_color = GColorFromHEX(0x005500); // Dark Green
+
     s_main_window = window_create();
     window_set_window_handlers(s_main_window, (WindowHandlers) {
         .load = main_window_load,
@@ -542,9 +609,17 @@ static void init() {
     update_date(tick_time);
 
     tick_timer_service_subscribe(MINUTE_UNIT | DAY_UNIT, tick_handler);
+
+    // Register AppMessage handlers
+    app_message_register_inbox_received(inbox_received_handler);
+    app_message_register_inbox_dropped(inbox_dropped_handler);
+    app_message_register_outbox_failed(outbox_failed_handler);
+    app_message_register_outbox_sent(outbox_sent_handler);
+    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
 }
 
 static void deinit() {
+    app_message_deregister_callbacks();
     window_destroy(s_main_window);
 }
 
