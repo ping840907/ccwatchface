@@ -23,7 +23,7 @@ typedef struct {
 
 // UI 視窗元件
 static Window *s_main_window;
-static GColor s_minute_color;
+static GColor s_accent_color;
 
 // 時間顯示圖層 (小時十位/個位, 分鐘十位/個位)
 static DisplayLayer s_hour_layers[2];
@@ -270,20 +270,29 @@ static void start_animation_timer() {
 // ==================== 工具函式 ====================
 
 /**
- * 根據圖層類型修改點陣圖（例如，反轉小時的顏色，或設定分鐘的顏色）
+ * 根據圖層類型修改點陣圖的調色盤
  */
 static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
     if (!bitmap) return;
 
-    // 如果是分鐘第二個字圖層，將黑色換成使用者設定的顏色
-    if (display_layer == &s_minute_layers[1]) {
-        GColor *palette = gbitmap_get_palette(bitmap);
-        if (palette) {
-            for (int i = 0; i < 2; i++) {
-                if (gcolor_equal(palette[i], GColorBlack)) {
-                    palette[i] = s_minute_color;
-                    break;
-                }
+    GColor *palette = gbitmap_get_palette(bitmap);
+    if (!palette) return;
+
+    // 如果是小時圖層，將紅色(#FF0000)替換為主題色
+    if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
+        for (int i = 0; i < 8; i++) { // Assume a safe maximum of 8 colors
+            if (gcolor_equal(palette[i], GColorRed)) {
+                palette[i] = s_accent_color;
+                break;
+            }
+        }
+    }
+    // 如果是分鐘第二個字圖層，將黑色換成主題色
+    else if (display_layer == &s_minute_layers[1]) {
+        for (int i = 0; i < 2; i++) { // These are known to be 1-bit
+            if (gcolor_equal(palette[i], GColorBlack)) {
+                palette[i] = s_accent_color;
+                break;
             }
         }
     }
@@ -311,11 +320,12 @@ static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint3
     // 嘗試啟動動畫
     if (anim && old_bitmap && new_bitmap) {
         // 修正動畫顏色問題：在動畫開始前，將新圖片的調色盤複製到舊圖片上
-        if (display_layer == &s_minute_layers[1]) {
+        if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1] || display_layer == &s_minute_layers[1]) {
             GColor *old_palette = gbitmap_get_palette(old_bitmap);
             GColor *new_palette = gbitmap_get_palette(new_bitmap);
             if (old_palette && new_palette) {
-                memcpy(old_palette, new_palette, sizeof(GColor) * 2);
+                // 假設小時圖層最多8色，分鐘圖層2色，取最大值
+                memcpy(old_palette, new_palette, sizeof(GColor) * 8);
             }
         }
 
@@ -531,11 +541,11 @@ static void main_window_load(Window *window) {
 }
 
 static void inbox_received_handler(DictionaryIterator *iter, void *context) {
-    Tuple *minute_color_t = dict_find(iter, MESSAGE_KEY_KEY_MINUTE_COLOR);
-    if (minute_color_t) {
-        s_minute_color = GColorFromHEX(minute_color_t->value->int32);
+    Tuple *accent_color_t = dict_find(iter, MESSAGE_KEY_KEY_MINUTE_COLOR);
+    if (accent_color_t) {
+        s_accent_color = GColorFromHEX(accent_color_t->value->int32);
 
-        // 重新繪製分鐘，讓顏色生效
+        // 重新繪製時間，讓顏色生效
         update_time();
     }
 }
@@ -584,7 +594,7 @@ static void main_window_unload(Window *window) {
 // ==================== 應用程式生命週期 ====================
 
 static void init() {
-    s_minute_color = GColorFromHEX(0x005500); // Dark Green
+    s_accent_color = GColorFromHEX(0x005500); // Dark Green
 
     s_main_window = window_create();
     window_set_window_handlers(s_main_window, (WindowHandlers) {
