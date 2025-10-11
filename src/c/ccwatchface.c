@@ -15,7 +15,7 @@ typedef struct {
     uint8_t *new_pixels;   // 新圖像的像素數據副本
     int bytes_per_row;     // 每行的字節數
     GSize size;            // 圖像大小
-    int step;              // 當前動畫步驟 (0-10)
+    int step;              // 當前動畫步驟
     bool animating;        // 是否正在動畫
 } AnimationState;
 
@@ -270,9 +270,6 @@ static void start_animation_timer() {
 
 /**
  * 設定顯示圖層的點陣圖（帶動畫）
- */
-/**
- * 設定顯示圖層的點陣圖（帶動畫）- 已修正版本
  */
 static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id,
                                                AnimationState *anim, GSize size) {
