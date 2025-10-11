@@ -515,8 +515,8 @@ static void divider_update_proc(Layer *layer, GContext *ctx) {
 static void main_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
 
-    // 建立小時背景 Layer
-    s_hour_background_layer = layer_create(GRect(TIME_COL1_X - 8, TIME_ROW1_Y - 8, (TIME_COL2_X - TIME_COL1_X) + TIME_IMAGE_SIZE.w + 16, TIME_IMAGE_SIZE.h + 16));
+    // 建立小時背景 Layer (修正尺寸和順序)
+    s_hour_background_layer = layer_create(GRect(8, 8, 184, 88));
     layer_set_update_proc(s_hour_background_layer, hour_background_update_proc);
     layer_add_child(window_layer, s_hour_background_layer);
 
