@@ -95,12 +95,13 @@ static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
     GColor *palette = gbitmap_get_palette(bitmap);
     if (!palette) return;
 
-    // 如果是小時圖層，將紅色(#FF0000)替換為主題色
+    // 如果是小時圖層，將紅色(#FF0000)替換為主題色，黑色換成白色
     if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
         for (int i = 0; i < 8; i++) {
             if (gcolor_equal(palette[i], GColorRed)) {
                 palette[i] = s_accent_color;
-                break;
+            } else if (gcolor_equal(palette[i], GColorBlack)) {
+                palette[i] = GColorWhite;
             }
         }
     }
@@ -109,6 +110,16 @@ static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
         for (int i = 0; i < 2; i++) {
             if (gcolor_equal(palette[i], GColorBlack)) {
                 palette[i] = s_accent_color;
+                break;
+            }
+        }
+    }
+    // 其他所有圖層，將黑色換成白色
+    else {
+        // 假設調色盤不會太大，對日期等小圖示應該足夠
+        for (int i = 0; i < 4; i++) {
+            if (gcolor_equal(palette[i], GColorBlack)) {
+                palette[i] = GColorWhite;
                 break;
             }
         }
@@ -455,7 +466,7 @@ static void init() {
     s_accent_color = GColorFromHEX(0xFFAA00); // 預設顏色
 
     s_main_window = window_create();
-    window_set_background_color(s_main_window, GColorWhite);
+    window_set_background_color(s_main_window, GColorBlack);
     window_set_window_handlers(s_main_window, (WindowHandlers) {
         .load = main_window_load,
         .unload = main_window_unload,
