@@ -7,17 +7,8 @@ typedef struct {
     BitmapLayer *layer;
     GBitmap *bitmap;
     uint32_t current_resource_id;
+    PropertyAnimation *animation;
 } DisplayLayer;
-
-// 動畫狀態結構
-typedef struct {
-    uint8_t *old_pixels;   // 舊圖像的像素數據副本
-    uint8_t *new_pixels;   // 新圖像的像素數據副本
-    int bytes_per_row;     // 每行的字節數
-    GSize size;            // 圖像大小
-    int step;              // 當前動畫步驟
-    bool animating;        // 是否正在動畫
-} AnimationState;
 
 // ==================== 全域變數宣告 ====================
 
@@ -39,15 +30,6 @@ static DisplayLayer s_yue_layer;
 static DisplayLayer s_ri_layer;
 static DisplayLayer s_zhou_layer;
 
-// 動畫狀態
-static AnimationState s_hour_anims[2];
-static AnimationState s_minute_anims[2];
-static AnimationState s_month_anims[2];
-static AnimationState s_day_anims[2];
-static AnimationState s_week_anim;
-
-static AppTimer *s_animation_timer = NULL;
-
 // ==================== 螢幕佈局常數定義 ====================
 
 #define SCREEN_WIDTH 200
@@ -60,8 +42,8 @@ static AppTimer *s_animation_timer = NULL;
 #define TIME_ROW2_Y (TIME_ROW1_Y + TIME_IMAGE_SIZE.h + 8)
 #define DATE_ROW_Y (TIME_ROW2_Y + TIME_IMAGE_SIZE.h + 7)
 
-#define ANIMATION_STEPS 2
-#define ANIMATION_INTERVAL_MS 40  // 40ms * 2 steps = 80ms total
+#define ANIMATION_DURATION_MS 300
+#define FADE_OUT_DISTANCE 5  // 淡出時向上移動的像素
 
 // ==================== 圖片資源映射表 ====================
 
@@ -102,171 +84,6 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_SL8, RESOURCE_ID_IMG_SL9,
 };
 
-// ==================== 動畫輔助函式 ====================
-
-/**
- * 複製 GBitmap 的像素數據
- */
-static uint8_t* copy_bitmap_data(GBitmap *bitmap, GSize size, int *bytes_per_row_out) {
-    if (!bitmap) return NULL;
-    
-    uint8_t *data = gbitmap_get_data(bitmap);
-    if (!data) return NULL;
-    
-    int bytes_per_row = gbitmap_get_bytes_per_row(bitmap);
-    if (bytes_per_row_out) {
-        *bytes_per_row_out = bytes_per_row;
-    }
-    
-    int total_bytes = bytes_per_row * size.h;
-    
-    uint8_t *copy = malloc(total_bytes);
-    if (copy) {
-        memcpy(copy, data, total_bytes);
-    }
-    return copy;
-}
-
-/**
- * 初始化動畫狀態
- */
-static void init_animation(AnimationState *anim, GBitmap *old_bmp, GBitmap *new_bmp, GSize size) {
-    // 清理舊的動畫數據
-    if (anim->old_pixels) {
-        free(anim->old_pixels);
-        anim->old_pixels = NULL;
-    }
-    if (anim->new_pixels) {
-        free(anim->new_pixels);
-        anim->new_pixels = NULL;
-    }
-    
-    anim->size = size;
-    anim->step = 1;
-    anim->animating = false;
-    anim->bytes_per_row = 0;
-    
-    // 如果沒有舊圖像，直接顯示新圖像，不需要動畫
-    if (!old_bmp) return;
-    
-    int old_bpr = 0, new_bpr = 0;
-    anim->old_pixels = copy_bitmap_data(old_bmp, size, &old_bpr);
-    anim->new_pixels = copy_bitmap_data(new_bmp, size, &new_bpr);
-    
-    // 確保兩個圖像的字節數相同
-    if (old_bpr != new_bpr) {
-        if (anim->old_pixels) free(anim->old_pixels);
-        if (anim->new_pixels) free(anim->new_pixels);
-        anim->old_pixels = NULL;
-        anim->new_pixels = NULL;
-        return;
-    }
-    
-    anim->bytes_per_row = old_bpr;
-    
-    if (anim->old_pixels && anim->new_pixels) {
-        anim->animating = true;
-    }
-}
-
-/**
- * 更新單個圖層的動畫幀
- */
-static bool update_animation_frame(DisplayLayer *layer, AnimationState *anim) {
-    if (!anim->animating || !layer->bitmap) {
-        return false;
-    }
-    
-    if (anim->step > ANIMATION_STEPS) {
-        anim->animating = false;
-        return false;
-    }
-    
-    uint8_t *current = gbitmap_get_data(layer->bitmap);
-    if (!current || !anim->old_pixels || !anim->new_pixels) {
-        anim->animating = false;
-        return false;
-    }
-    
-    int bytes_per_row = anim->bytes_per_row;
-    
-    // 如果已經完成動畫，確保顯示最終狀態
-    if (anim->step == ANIMATION_STEPS) {
-        int total_bytes = bytes_per_row * anim->size.h;
-        memcpy(current, anim->new_pixels, total_bytes);
-        anim->step++;
-        layer_mark_dirty(bitmap_layer_get_layer(layer->layer));
-        return false;
-    }
-    
-    // 逐像素混合
-    for (int y = 0; y < anim->size.h; y++) {
-        for (int x = 0; x < anim->size.w; x++) {
-            int byte_idx = y * bytes_per_row + (x / 8);
-            int bit_idx = x % 8;
-            uint8_t mask = 1 << bit_idx;
-            
-            bool old_set = (anim->old_pixels[byte_idx] & mask) != 0;
-            bool new_set = (anim->new_pixels[byte_idx] & mask) != 0;
-            
-            bool show = false;
-            
-            if (old_set == new_set) {
-                // 共同像素，保持不變
-                show = new_set;
-            } else {
-                // 使用棋盤格模式來決定像素是否顯示
-                show = ((x + y) % 2 == 0);
-            }
-            
-            if (show) {
-                current[byte_idx] |= mask;
-            } else {
-                current[byte_idx] &= ~mask;
-            }
-        }
-    }
-    
-    anim->step++;
-    layer_mark_dirty(bitmap_layer_get_layer(layer->layer));
-    return true;
-}
-
-/**
- * 動畫計時器回調
- */
-static void animation_timer_callback(void *data) {
-    bool any_animating = false;
-    
-    // 更新所有動畫
-    any_animating |= update_animation_frame(&s_hour_layers[0], &s_hour_anims[0]);
-    any_animating |= update_animation_frame(&s_hour_layers[1], &s_hour_anims[1]);
-    any_animating |= update_animation_frame(&s_minute_layers[0], &s_minute_anims[0]);
-    any_animating |= update_animation_frame(&s_minute_layers[1], &s_minute_anims[1]);
-    any_animating |= update_animation_frame(&s_month_layers[0], &s_month_anims[0]);
-    any_animating |= update_animation_frame(&s_month_layers[1], &s_month_anims[1]);
-    any_animating |= update_animation_frame(&s_day_layers[0], &s_day_anims[0]);
-    any_animating |= update_animation_frame(&s_day_layers[1], &s_day_anims[1]);
-    any_animating |= update_animation_frame(&s_week_layer, &s_week_anim);
-    
-    // 如果還有動畫在進行，繼續計時
-    if (any_animating) {
-        s_animation_timer = app_timer_register(ANIMATION_INTERVAL_MS, animation_timer_callback, NULL);
-    } else {
-        s_animation_timer = NULL;
-    }
-}
-
-/**
- * 啟動動畫計時器
- */
-static void start_animation_timer() {
-    if (s_animation_timer) {
-        app_timer_cancel(s_animation_timer);
-    }
-    s_animation_timer = app_timer_register(ANIMATION_INTERVAL_MS, animation_timer_callback, NULL);
-}
-
 // ==================== 工具函式 ====================
 
 /**
@@ -280,7 +97,7 @@ static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
 
     // 如果是小時圖層，將紅色(#FF0000)替換為主題色
     if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
-        for (int i = 0; i < 8; i++) { // Assume a safe maximum of 8 colors
+        for (int i = 0; i < 8; i++) {
             if (gcolor_equal(palette[i], GColorRed)) {
                 palette[i] = s_accent_color;
                 break;
@@ -289,7 +106,7 @@ static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
     }
     // 如果是分鐘第二個字圖層，將黑色換成主題色
     else if (display_layer == &s_minute_layers[1]) {
-        for (int i = 0; i < 2; i++) { // These are known to be 1-bit
+        for (int i = 0; i < 2; i++) {
             if (gcolor_equal(palette[i], GColorBlack)) {
                 palette[i] = s_accent_color;
                 break;
@@ -299,66 +116,120 @@ static void customize_bitmap(DisplayLayer *display_layer, GBitmap *bitmap) {
 }
 
 /**
- * 設定顯示圖層的點陣圖（帶動畫）
+ * 淡入動畫停止回調 - 清理動畫對象
  */
-static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id,
-                                               AnimationState *anim, GSize size) {
-    // 【捷徑 1: 效率提升】
-    // 如果要顯示的資源ID和目前的一樣，代表畫面無須更新，直接返回。
+static void fade_in_stopped_handler(Animation *animation, bool finished, void *context) {
+    DisplayLayer *display_layer = (DisplayLayer *)context;
+    
+    // 清理動畫對象
+    if (display_layer->animation) {
+        property_animation_destroy(display_layer->animation);
+        display_layer->animation = NULL;
+    }
+}
+
+/**
+ * 淡出動畫停止回調 - 替換圖片並開始淡入
+ */
+static void fade_out_stopped_handler(Animation *animation, bool finished, void *context) {
+    if (!finished) return;
+    
+    DisplayLayer *dl = (DisplayLayer *)context;
+    Layer *l = bitmap_layer_get_layer(dl->layer);
+    
+    // 銷毀舊圖並載入新圖
+    if (dl->bitmap) {
+        gbitmap_destroy(dl->bitmap);
+    }
+    
+    uint32_t new_res_id = dl->current_resource_id; // 暫存在 current_resource_id
+    dl->bitmap = (new_res_id != 0) ? gbitmap_create_with_resource(new_res_id) : NULL;
+    customize_bitmap(dl, dl->bitmap);
+    bitmap_layer_set_bitmap(dl->layer, dl->bitmap);
+    
+    // 階段2: 淡入新圖（從下方移動到正確位置）
+    GRect current_frame = layer_get_frame(l);
+    GRect target_frame = current_frame;
+    target_frame.origin.y -= FADE_OUT_DISTANCE;  // 向上移動到正確位置
+    
+    PropertyAnimation *fade_in = property_animation_create_layer_frame(l, &current_frame, &target_frame);
+    animation_set_duration((Animation *)fade_in, ANIMATION_DURATION_MS / 2);
+    animation_set_curve((Animation *)fade_in, AnimationCurveEaseOut);
+    
+    animation_set_handlers((Animation *)fade_in, (AnimationHandlers){
+        .stopped = fade_in_stopped_handler
+    }, dl);
+    
+    dl->animation = fade_in;
+    animation_schedule((Animation *)fade_in);
+}
+
+/**
+ * 設定顯示圖層的點陣圖（帶淡入淡出動畫）
+ */
+static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id, GSize size) {
+    // 如果要顯示的資源ID和目前的一樣，無須更新
     if (display_layer->current_resource_id == resource_id) {
         return;
     }
 
-    GBitmap *old_bitmap = display_layer->bitmap;
-    GBitmap *new_bitmap = (resource_id != 0) ? gbitmap_create_with_resource(resource_id) : NULL;
-
-    // 在動畫之前或設定之前，客製化點陣圖
-    customize_bitmap(display_layer, new_bitmap);
-
-    bool animation_will_run = false;
-
-    // 嘗試啟動動畫
-    if (anim && old_bitmap && new_bitmap) {
-        // 修正動畫顏色問題：在動畫開始前，將新圖片的調色盤複製到舊圖片上
-        if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1] || display_layer == &s_minute_layers[1]) {
-            GColor *old_palette = gbitmap_get_palette(old_bitmap);
-            GColor *new_palette = gbitmap_get_palette(new_bitmap);
-            if (old_palette && new_palette) {
-                // 假設小時圖層最多8色，分鐘圖層2色，取最大值
-                memcpy(old_palette, new_palette, sizeof(GColor) * 8);
-            }
-        }
-
-        init_animation(anim, old_bitmap, new_bitmap, size);
-
-        // 【捷徑 2: 穩健性增強】
-        // 檢查 init_animation 是否成功 (例如，malloc 是否成功)
-        if (anim->animating) {
-            // 動畫初始化成功
-            animation_will_run = true;
-            
-            // 我們只需要 new_bitmap 的像素數據，現在可以銷毀它了
-            gbitmap_destroy(new_bitmap);
-            
-            // 讓動畫在 old_bitmap 上進行繪製
-        }
-        // 如果 anim->animating 為 false，代表初始化失敗，將會走下面的非動畫路徑
+    // 取消正在進行的動畫
+    if (display_layer->animation) {
+        animation_unschedule((Animation *)display_layer->animation);
+        property_animation_destroy(display_layer->animation);
+        display_layer->animation = NULL;
     }
 
-    // 如果動畫無法運行 (條件不滿足 或 初始化失敗)，則執行無動畫的直接替換
-    if (!animation_will_run) {
-        // 這是備用方案 (Fallback) 或 正常無動畫更新
-        if (old_bitmap) {
-            gbitmap_destroy(old_bitmap);
-        }
-        display_layer->bitmap = new_bitmap;
-        bitmap_layer_set_bitmap(display_layer->layer, new_bitmap);
-    }
+    Layer *layer = bitmap_layer_get_layer(display_layer->layer);
+    GRect current_frame = layer_get_frame(layer);
+    GRect target_frame = current_frame;
+    target_frame.origin.y -= FADE_OUT_DISTANCE;  // 目標位置是向上偏移後的正確位置
     
-    // 無論是哪種路徑，最後都要更新當前顯示的 resource_id
+    // 如果是第一次設定（沒有舊圖），使用淡入動畫
+    if (display_layer->current_resource_id == 0) {
+        if (display_layer->bitmap) {
+            gbitmap_destroy(display_layer->bitmap);
+        }
+        
+        display_layer->bitmap = (resource_id != 0) ? gbitmap_create_with_resource(resource_id) : NULL;
+        customize_bitmap(display_layer, display_layer->bitmap);
+        bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
+        display_layer->current_resource_id = resource_id;
+        
+        // 執行淡入動畫到正確位置
+        PropertyAnimation *fade_in = property_animation_create_layer_frame(layer, &current_frame, &target_frame);
+        animation_set_duration((Animation *)fade_in, ANIMATION_DURATION_MS / 2);
+        animation_set_curve((Animation *)fade_in, AnimationCurveEaseOut);
+        animation_set_handlers((Animation *)fade_in, (AnimationHandlers){
+            .stopped = fade_in_stopped_handler
+        }, display_layer);
+        
+        display_layer->animation = fade_in;
+        animation_schedule((Animation *)fade_in);
+        return;
+    }
+
+    // 將新的 resource_id 暫存在 current_resource_id 中，供淡出回調使用
     display_layer->current_resource_id = resource_id;
+    
+    // 階段1: 淡出舊圖（向下移動回初始位置）
+    GRect fade_out_frame = current_frame;
+    fade_out_frame.origin.y += FADE_OUT_DISTANCE;  // 向下移動
+    
+    PropertyAnimation *fade_out = property_animation_create_layer_frame(layer, &current_frame, &fade_out_frame);
+    animation_set_duration((Animation *)fade_out, ANIMATION_DURATION_MS / 2);
+    animation_set_curve((Animation *)fade_out, AnimationCurveEaseIn);
+    animation_set_handlers((Animation *)fade_out, (AnimationHandlers){
+        .stopped = fade_out_stopped_handler
+    }, display_layer);
+    
+    display_layer->animation = fade_out;
+    animation_schedule((Animation *)fade_out);
 }
 
+/**
+ * 直接設定顯示圖層的點陣圖（無動畫，用於固定圖層）
+ */
 static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id) {
     if (display_layer->bitmap) {
         gbitmap_destroy(display_layer->bitmap);
@@ -367,10 +238,13 @@ static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resou
 
     if (resource_id != 0) {
         display_layer->bitmap = gbitmap_create_with_resource(resource_id);
+        customize_bitmap(display_layer, display_layer->bitmap);
         bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
     } else {
         bitmap_layer_set_bitmap(display_layer->layer, NULL);
     }
+    
+    display_layer->current_resource_id = resource_id;
 }
 
 // ==================== 時間更新邏輯 ====================
@@ -395,9 +269,9 @@ static void update_time() {
             hour_tens_res_id = TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
         }
     }
-    
-    set_display_layer_bitmap_animated(&s_hour_layers[0], hour_tens_res_id, &s_hour_anims[0], TIME_IMAGE_SIZE);
-    set_display_layer_bitmap_animated(&s_hour_layers[1], hour_ones_res_id, &s_hour_anims[1], TIME_IMAGE_SIZE);
+
+    set_display_layer_bitmap_animated(&s_hour_layers[0], hour_tens_res_id, TIME_IMAGE_SIZE);
+    set_display_layer_bitmap_animated(&s_hour_layers[1], hour_ones_res_id, TIME_IMAGE_SIZE);
 
     int minute = tick_time->tm_min;
     int m1 = minute / 10;
@@ -422,12 +296,9 @@ static void update_time() {
         minute_tens_res_id = TIME_LOWERCASE_ONES_RESOURCES[m1];
         minute_ones_res_id = TIME_LOWERCASE_ONES_RESOURCES[m2];
     }
-    
-    set_display_layer_bitmap_animated(&s_minute_layers[0], minute_tens_res_id, &s_minute_anims[0], TIME_IMAGE_SIZE);
-    set_display_layer_bitmap_animated(&s_minute_layers[1], minute_ones_res_id, &s_minute_anims[1], TIME_IMAGE_SIZE);
-    
-    // 啟動動畫
-    start_animation_timer();
+
+    set_display_layer_bitmap_animated(&s_minute_layers[0], minute_tens_res_id, TIME_IMAGE_SIZE);
+    set_display_layer_bitmap_animated(&s_minute_layers[1], minute_ones_res_id, TIME_IMAGE_SIZE);
 }
 
 // ==================== 日期更新邏輯 ====================
@@ -461,14 +332,11 @@ static void update_date(struct tm *tick_time) {
 
     uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_RI : DATE_LOWERCASE_ONES_RESOURCES[week];
 
-    set_display_layer_bitmap_animated(&s_month_layers[0], month_tens_res_id, &s_month_anims[0], DATE_IMAGE_SIZE);
-    set_display_layer_bitmap_animated(&s_month_layers[1], month_ones_res_id, &s_month_anims[1], DATE_IMAGE_SIZE);
-    set_display_layer_bitmap_animated(&s_day_layers[0], day_tens_res_id, &s_day_anims[0], DATE_IMAGE_SIZE);
-    set_display_layer_bitmap_animated(&s_day_layers[1], day_ones_res_id, &s_day_anims[1], DATE_IMAGE_SIZE);
-    set_display_layer_bitmap_animated(&s_week_layer, week_res_id, &s_week_anim, DATE_IMAGE_SIZE);
-    
-    // 啟動動畫
-    start_animation_timer();
+    set_display_layer_bitmap_animated(&s_month_layers[0], month_tens_res_id, DATE_IMAGE_SIZE);
+    set_display_layer_bitmap_animated(&s_month_layers[1], month_ones_res_id, DATE_IMAGE_SIZE);
+    set_display_layer_bitmap_animated(&s_day_layers[0], day_tens_res_id, DATE_IMAGE_SIZE);
+    set_display_layer_bitmap_animated(&s_day_layers[1], day_ones_res_id, DATE_IMAGE_SIZE);
+    set_display_layer_bitmap_animated(&s_week_layer, week_res_id, DATE_IMAGE_SIZE);
 }
 
 // ==================== 事件處理 ====================
@@ -483,22 +351,36 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 // ==================== UI 畫面建構 ====================
 
-static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *display_layer) {
-    display_layer->layer = bitmap_layer_create(bounds);
+static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *display_layer, bool animated) {
+    // 如果需要動畫，調整初始位置：向下偏移以配合淡入動畫
+    GRect adjusted_bounds = bounds;
+    if (animated) {
+        adjusted_bounds.origin.y += FADE_OUT_DISTANCE;
+    }
+    
+    display_layer->layer = bitmap_layer_create(adjusted_bounds);
     bitmap_layer_set_background_color(display_layer->layer, GColorClear);
     bitmap_layer_set_compositing_mode(display_layer->layer, GCompOpSet);
     layer_add_child(parent, bitmap_layer_get_layer(display_layer->layer));
     display_layer->bitmap = NULL;
     display_layer->current_resource_id = 0;
+    display_layer->animation = NULL;
 }
 
 static void destroy_display_layer(DisplayLayer *display_layer) {
     if (display_layer) {
+        if (display_layer->animation) {
+            animation_unschedule((Animation *)display_layer->animation);
+            property_animation_destroy(display_layer->animation);
+            display_layer->animation = NULL;
+        }
         if (display_layer->bitmap) {
             gbitmap_destroy(display_layer->bitmap);
+            display_layer->bitmap = NULL;
         }
         if (display_layer->layer) {
             bitmap_layer_destroy(display_layer->layer);
+            display_layer->layer = NULL;
         }
     }
 }
@@ -531,13 +413,6 @@ static void main_window_load(Window *window) {
     set_display_layer_bitmap(&s_yue_layer, RESOURCE_ID_IMG_YUE);
     set_display_layer_bitmap(&s_ri_layer, RESOURCE_ID_IMG_RI);
     set_display_layer_bitmap(&s_zhou_layer, RESOURCE_ID_IMG_ZHOU);
-    
-    // 初始化動畫狀態
-    memset(&s_hour_anims, 0, sizeof(s_hour_anims));
-    memset(&s_minute_anims, 0, sizeof(s_minute_anims));
-    memset(&s_month_anims, 0, sizeof(s_month_anims));
-    memset(&s_day_anims, 0, sizeof(s_day_anims));
-    memset(&s_week_anim, 0, sizeof(s_week_anim));
 }
 
 static void inbox_received_handler(DictionaryIterator *iter, void *context) {
@@ -563,23 +438,6 @@ static void outbox_sent_handler(DictionaryIterator *iterator, void *context) {
 }
 
 static void main_window_unload(Window *window) {
-    // 取消動畫計時器
-    if (s_animation_timer) {
-        app_timer_cancel(s_animation_timer);
-        s_animation_timer = NULL;
-    }
-    
-    // 清理動畫數據
-    AnimationState* all_anims[] = {
-        &s_hour_anims[0], &s_hour_anims[1], &s_minute_anims[0], &s_minute_anims[1],
-        &s_month_anims[0], &s_month_anims[1], &s_day_anims[0], &s_day_anims[1], &s_week_anim
-    };
-    
-    for (size_t i = 0; i < ARRAY_LENGTH(all_anims); i++) {
-        if (all_anims[i]->old_pixels) free(all_anims[i]->old_pixels);
-        if (all_anims[i]->new_pixels) free(all_anims[i]->new_pixels);
-    }
-    
     DisplayLayer* all_layers[] = {
         &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
         &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
@@ -594,32 +452,35 @@ static void main_window_unload(Window *window) {
 // ==================== 應用程式生命週期 ====================
 
 static void init() {
-    s_accent_color = GColorFromHEX(0x005500); // Dark Green
+    s_accent_color = GColorRed; // 預設顏色
 
     s_main_window = window_create();
+    window_set_background_color(s_main_window, GColorWhite);
     window_set_window_handlers(s_main_window, (WindowHandlers) {
         .load = main_window_load,
-        .unload = main_window_unload
+        .unload = main_window_unload,
     });
+
     window_stack_push(s_main_window, true);
 
-    time_t temp = time(NULL);
-    struct tm *tick_time = localtime(&temp);
+    // 註冊時間更新
+    tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+
+    // 初始化顯示
+    time_t now = time(NULL);
+    struct tm *current_time = localtime(&now);
     update_time();
-    update_date(tick_time);
+    update_date(current_time);
 
-    tick_timer_service_subscribe(MINUTE_UNIT | DAY_UNIT, tick_handler);
-
-    // Register AppMessage handlers
+    // 註冊訊息處理
     app_message_register_inbox_received(inbox_received_handler);
     app_message_register_inbox_dropped(inbox_dropped_handler);
     app_message_register_outbox_failed(outbox_failed_handler);
     app_message_register_outbox_sent(outbox_sent_handler);
-    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+    app_message_open(128, 128);
 }
 
 static void deinit() {
-    app_message_deregister_callbacks();
     window_destroy(s_main_window);
 }
 
