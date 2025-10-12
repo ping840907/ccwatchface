@@ -352,8 +352,10 @@ static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, 
     bitmap_layer_set_background_color(dl->layer, GColorClear);
 
 #if defined(PBL_BW)
-    // 黑白螢幕使用 GCompOpSet 來正確顯示透明背景的圖片
-    bitmap_layer_set_compositing_mode(dl->layer, GCompOpSet);
+    // 黑白螢幕：圖片是全黑色文字
+    // 深色主題（黑底）：GCompOpAssignInverted 反轉黑色→白色
+    // 淺色主題（白底）：GCompOpOr 保持黑色
+    bitmap_layer_set_compositing_mode(dl->layer, s_is_dark_theme ? GCompOpAssignInverted : GCompOpOr);
 #else
     bitmap_layer_set_compositing_mode(dl->layer, GCompOpSet);
 #endif
@@ -377,58 +379,37 @@ static void destroy_display_layer(DisplayLayer *dl) {
 static void main_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
 
-    // Define GRects for each layer based on platform
-    GRect hour1_rect, hour2_rect, min1_rect, min2_rect;
-    GRect month1_rect, month2_rect, yue_rect, day1_rect, day2_rect, ri_rect, zhou_rect, week_rect;
-
 #if defined(PBL_PLATFORM_EMERY)
     // --- Emery Rectangular Layout ---
-    // Time
-    hour1_rect = GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    hour2_rect = GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    min1_rect = GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    min2_rect = GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    // Date
-    month1_rect = GRect(DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    month2_rect = GRect(DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    yue_rect = GRect(DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    day1_rect = GRect(DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    day2_rect = GRect(DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    ri_rect = GRect(DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    zhou_rect = GRect(DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    week_rect = GRect(DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
+    create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[0], true);
+    create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[1], true);
+    create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[0], true);
+    create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[1], true);
+
+    create_display_layer(window_layer, GRect(DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[0], true);
+    create_display_layer(window_layer, GRect(DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[1], true);
+    create_display_layer(window_layer, GRect(DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_yue_layer, false);
+    create_display_layer(window_layer, GRect(DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[0], true);
+    create_display_layer(window_layer, GRect(DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[1], true);
+    create_display_layer(window_layer, GRect(DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_ri_layer, false);
+    create_display_layer(window_layer, GRect(DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_zhou_layer, false);
+    create_display_layer(window_layer, GRect(DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_week_layer, true);
 #else
     // --- Small Rectangular Layout (Aplite, Basalt, Diorite) ---
-    // Time
-    hour1_rect = GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    hour2_rect = GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    min1_rect = GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    min2_rect = GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h);
-    // Date
-    month1_rect = GRect(DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    month2_rect = GRect(DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    yue_rect = GRect(DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    day1_rect = GRect(DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    day2_rect = GRect(DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    ri_rect = GRect(DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    zhou_rect = GRect(DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
-    week_rect = GRect(DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h);
+    create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[0], true);
+    create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_hour_layers[1], true);
+    create_display_layer(window_layer, GRect(TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[0], true);
+    create_display_layer(window_layer, GRect(TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h), &s_minute_layers[1], true);
+
+    create_display_layer(window_layer, GRect(DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[0], true);
+    create_display_layer(window_layer, GRect(DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_month_layers[1], true);
+    create_display_layer(window_layer, GRect(DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_yue_layer, false);
+    create_display_layer(window_layer, GRect(DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[0], true);
+    create_display_layer(window_layer, GRect(DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_day_layers[1], true);
+    create_display_layer(window_layer, GRect(DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_ri_layer, false);
+    create_display_layer(window_layer, GRect(DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_zhou_layer, false);
+    create_display_layer(window_layer, GRect(DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h), &s_week_layer, true);
 #endif
-
-    // Create all layers using the calculated GRects
-    create_display_layer(window_layer, hour1_rect, &s_hour_layers[0], true);
-    create_display_layer(window_layer, hour2_rect, &s_hour_layers[1], true);
-    create_display_layer(window_layer, min1_rect, &s_minute_layers[0], true);
-    create_display_layer(window_layer, min2_rect, &s_minute_layers[1], true);
-
-    create_display_layer(window_layer, month1_rect, &s_month_layers[0], true);
-    create_display_layer(window_layer, month2_rect, &s_month_layers[1], true);
-    create_display_layer(window_layer, yue_rect, &s_yue_layer, false);
-    create_display_layer(window_layer, day1_rect, &s_day_layers[0], true);
-    create_display_layer(window_layer, day2_rect, &s_day_layers[1], true);
-    create_display_layer(window_layer, ri_rect, &s_ri_layer, false);
-    create_display_layer(window_layer, zhou_rect, &s_zhou_layer, false);
-    create_display_layer(window_layer, week_rect, &s_week_layer, true);
 
     // Set bitmaps for fixed layers
     set_display_layer_bitmap(&s_yue_layer, RESOURCE_ID_IMG_YUE);
@@ -452,8 +433,24 @@ static void main_window_unload(Window *window) {
 static void update_theme() {
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
 
-    // 在黑白螢幕上，不需要動態改變合成模式，統一使用 GCompOpSet
-    // 因為圖片資源已經針對不同主題準備了不同版本 (D 後綴)
+#if defined(PBL_BW)
+    // 黑白螢幕：根據主題動態切換合成模式
+    // 深色主題（黑底）：GCompOpAssignInverted 反轉黑色→白色
+    // 淺色主題（白底）：GCompOpOr 保持黑色
+    GCompOp compositing_mode = s_is_dark_theme ? GCompOpAssignInverted : GCompOpOr;
+
+    DisplayLayer* all_layers[] = {
+        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
+        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
+        &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
+    };
+
+    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
+        if (all_layers[i]->layer) {
+            bitmap_layer_set_compositing_mode(all_layers[i]->layer, compositing_mode);
+        }
+    }
+#endif
 
     // Force redraw of all elements
     time_t now = time(NULL);
@@ -495,12 +492,8 @@ static void init() {
     // 讀取儲存的設定
     s_accent_color = GColorFromHEX(persist_exists(KEY_MINUTE_COLOR) ? persist_read_int(KEY_MINUTE_COLOR) : 0xFFAA00);
     
-    // 針對黑白螢幕使用淺色主題作為預設，避免黑屏問題
-#if defined(PBL_BW)
-    s_is_dark_theme = persist_exists(KEY_THEME_IS_DARK) ? persist_read_bool(KEY_THEME_IS_DARK) : false;
-#else
+    // 所有平台預設使用深色主題（黑色背景）
     s_is_dark_theme = persist_exists(KEY_THEME_IS_DARK) ? persist_read_bool(KEY_THEME_IS_DARK) : true;
-#endif
 
     s_main_window = window_create();
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
