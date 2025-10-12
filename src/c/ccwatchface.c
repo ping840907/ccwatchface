@@ -452,7 +452,7 @@ static void main_window_unload(Window *window) {
 // ==================== 應用程式生命週期 ====================
 
 static void init() {
-    s_accent_color = GColorRed; // 預設顏色
+    s_accent_color = GColorFromHEX(0xFFAA00); // 預設顏色
 
     s_main_window = window_create();
     window_set_background_color(s_main_window, GColorWhite);
