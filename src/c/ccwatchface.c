@@ -352,10 +352,10 @@ static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, 
     bitmap_layer_set_background_color(dl->layer, GColorClear);
 
 #if defined(PBL_BW)
-    // 黑白螢幕：圖片是全黑色文字
-    // 深色主題（黑底）：GCompOpAssignInverted 反轉黑色→白色
-    // 淺色主題（白底）：GCompOpOr 保持黑色
-    bitmap_layer_set_compositing_mode(dl->layer, s_is_dark_theme ? GCompOpAssignInverted : GCompOpOr);
+    // 黑白螢幕：圖片是全黑色文字，帶透明背景
+    // 深色主題（黑底白字）：GCompOpClear 將來源的黑色像素區域變為白色，透明區域不變。
+    // 淺色主題（白底黑字）：GCompOpSet 將來源的黑色像素直接畫上。
+    bitmap_layer_set_compositing_mode(dl->layer, s_is_dark_theme ? GCompOpClear : GCompOpSet);
 #else
     bitmap_layer_set_compositing_mode(dl->layer, GCompOpSet);
 #endif
@@ -435,9 +435,9 @@ static void update_theme() {
 
 #if defined(PBL_BW)
     // 黑白螢幕：根據主題動態切換合成模式
-    // 深色主題（黑底）：GCompOpAssignInverted 反轉黑色→白色
-    // 淺色主題（白底）：GCompOpOr 保持黑色
-    GCompOp compositing_mode = s_is_dark_theme ? GCompOpAssignInverted : GCompOpOr;
+    // 深色主題（黑底白字）：GCompOpClear
+    // 淺色主題（白底黑字）：GCompOpSet
+    GCompOp compositing_mode = s_is_dark_theme ? GCompOpClear : GCompOpSet;
 
     DisplayLayer* all_layers[] = {
         &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
