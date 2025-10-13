@@ -123,7 +123,18 @@ static void update_date(struct tm* tick_time);
 static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     if (!bitmap) return;
 
-#if defined(PBL_COLOR)
+#if defined(PBL_BW)
+    // --- 黑白平台邏輯 ---
+    GColor *palette = gbitmap_get_palette(bitmap);
+    if (!palette) return;
+
+    // 根據主題設定文字顏色
+    // 圖片資源是黑色文字、透明背景。
+    // 調色盤索引 0 通常是背景，索引 1 是前景。
+    palette[0] = GColorClear; // 背景保持透明
+    palette[1] = s_is_dark_theme ? GColorWhite : GColorBlack; // 深色主題白字，淺色主題黑字
+
+#elif defined(PBL_COLOR)
     // --- 彩色平台邏輯 ---
     GColor *palette = gbitmap_get_palette(bitmap);
     if (!palette) return;
@@ -351,14 +362,9 @@ static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, 
     dl->layer = bitmap_layer_create(bounds);
     bitmap_layer_set_background_color(dl->layer, GColorClear);
 
-#if defined(PBL_BW)
-    // 黑白螢幕：圖片是全黑色文字
-    // 深色主題（黑底）：GCompOpAssignInverted 反轉黑色→白色
-    // 淺色主題（白底）：GCompOpOr 保持黑色
-    bitmap_layer_set_compositing_mode(dl->layer, s_is_dark_theme ? GCompOpAssignInverted : GCompOpOr);
-#else
+    // 現在所有顏色處理都在 apply_theme_to_layer 中透過調色盤完成，
+    // 因此所有平台都可以使用 GCompOpSet。
     bitmap_layer_set_compositing_mode(dl->layer, GCompOpSet);
-#endif
 
     layer_add_child(parent, bitmap_layer_get_layer(dl->layer));
     dl->bitmap = NULL;
@@ -433,26 +439,8 @@ static void main_window_unload(Window *window) {
 static void update_theme() {
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
 
-#if defined(PBL_BW)
-    // 黑白螢幕：根據主題動態切換合成模式
-    // 深色主題（黑底）：GCompOpAssignInverted 反轉黑色→白色
-    // 淺色主題（白底）：GCompOpOr 保持黑色
-    GCompOp compositing_mode = s_is_dark_theme ? GCompOpAssignInverted : GCompOpOr;
-
-    DisplayLayer* all_layers[] = {
-        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
-        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
-        &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
-    };
-
-    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
-        if (all_layers[i]->layer) {
-            bitmap_layer_set_compositing_mode(all_layers[i]->layer, compositing_mode);
-        }
-    }
-#endif
-
     // Force redraw of all elements
+    // The new palette colors will be applied in `apply_theme_to_layer`.
     time_t now = time(NULL);
     struct tm *current_time = localtime(&now);
     update_time();
