@@ -123,11 +123,11 @@ static void update_date(struct tm* tick_time);
 static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     if (!bitmap) return;
 
-#if defined(PBL_COLOR)
-    // --- 彩色平台邏輯 ---
     GColor *palette = gbitmap_get_palette(bitmap);
     if (!palette) return;
 
+#if defined(PBL_COLOR)
+    // --- 彩色平台邏輯 ---
     if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
         for (int i = 0; i < 8; i++) {
             if (gcolor_equal(palette[i], GColorRed)) {
@@ -151,6 +151,19 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
             }
         }
     }
+#else
+    // --- 黑白平台邏輯 ---
+    // 對於 1-bit 圖片，我們只改變黑色到白色，透明保持不變
+    if (s_is_dark_theme) {
+        // 尋找黑色並將其改為白色
+        for (int i = 0; i < 2; i++) {
+            if (gcolor_equal(palette[i], GColorBlack)) {
+                palette[i] = GColorWhite;
+                break;
+            }
+        }
+    }
+    // 如果是淺色主題，圖片本身就是黑色的，所以無需操作
 #endif
 }
 
@@ -351,14 +364,8 @@ static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, 
     dl->layer = bitmap_layer_create(bounds);
     bitmap_layer_set_background_color(dl->layer, GColorClear);
 
-#if defined(PBL_BW)
-    // 黑白螢幕：圖片是全黑色文字，帶透明背景
-    // 深色主題（黑底白字）：GCompOpClear 將來源的黑色像素區域變為白色，透明區域不變。
-    // 淺色主題（白底黑字）：GCompOpSet 將來源的黑色像素直接畫上。
-    bitmap_layer_set_compositing_mode(dl->layer, s_is_dark_theme ? GCompOpClear : GCompOpSet);
-#else
+    // 現在所有平台都使用 GCompOpSet，因為顏色由調色盤控制
     bitmap_layer_set_compositing_mode(dl->layer, GCompOpSet);
-#endif
 
     layer_add_child(parent, bitmap_layer_get_layer(dl->layer));
     dl->bitmap = NULL;
@@ -433,24 +440,7 @@ static void main_window_unload(Window *window) {
 static void update_theme() {
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
 
-#if defined(PBL_BW)
-    // 黑白螢幕：根據主題動態切換合成模式
-    // 深色主題（黑底白字）：GCompOpClear
-    // 淺色主題（白底黑字）：GCompOpSet
-    GCompOp compositing_mode = s_is_dark_theme ? GCompOpClear : GCompOpSet;
-
-    DisplayLayer* all_layers[] = {
-        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
-        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
-        &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
-    };
-
-    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
-        if (all_layers[i]->layer) {
-            bitmap_layer_set_compositing_mode(all_layers[i]->layer, compositing_mode);
-        }
-    }
-#endif
+    // 不再需要切換合成模式，因為顏色由 apply_theme_to_layer 處理
 
     // Force redraw of all elements
     time_t now = time(NULL);
