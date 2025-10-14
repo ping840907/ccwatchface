@@ -424,6 +424,12 @@ static void main_window_load(Window *window) {
     set_display_layer_bitmap(&s_yue_layer, RESOURCE_ID_IMG_YUE);
     set_display_layer_bitmap(&s_ri_layer, RESOURCE_ID_IMG_RI);
     set_display_layer_bitmap(&s_zhou_layer, RESOURCE_ID_IMG_ZHOU);
+
+    // Manually update time and date for the first time
+    time_t now = time(NULL);
+    struct tm *current_time = localtime(&now);
+    update_time();
+    update_date(current_time);
 }
 
 static void main_window_unload(Window *window) {
@@ -439,21 +445,24 @@ static void main_window_unload(Window *window) {
 
 // ==================== AppMessage & 設定處理 ====================
 
+static void refresh_layer_theme(DisplayLayer *dl) {
+    if (dl && dl->layer && dl->bitmap) {
+        apply_theme_to_layer(dl, dl->bitmap);
+        layer_mark_dirty(bitmap_layer_get_layer(dl->layer));
+    }
+}
+
 static void update_theme() {
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
 
-    // 不再需要切換合成模式，因為顏色由 apply_theme_to_layer 處理
-
-    // Force redraw of all elements
-    time_t now = time(NULL);
-    struct tm *current_time = localtime(&now);
-    update_time();
-    update_date(current_time);
-
-    // Redraw fixed layers
-    set_display_layer_bitmap(&s_yue_layer, RESOURCE_ID_IMG_YUE);
-    set_display_layer_bitmap(&s_ri_layer, RESOURCE_ID_IMG_RI);
-    set_display_layer_bitmap(&s_zhou_layer, RESOURCE_ID_IMG_ZHOU);
+    DisplayLayer* all_layers[] = {
+        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
+        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
+        &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
+    };
+    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
+        refresh_layer_theme(all_layers[i]);
+    }
 }
 
 static void inbox_received_handler(DictionaryIterator *iter, void *context) {
@@ -497,8 +506,6 @@ static void init() {
     window_stack_push(s_main_window, true);
 
     tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-
-    update_theme();
 
     app_message_register_inbox_received(inbox_received_handler);
     app_message_open(128, 128);
