@@ -13,16 +13,16 @@
       {
         "type": "color",
         "messageKey": "KEY_MINUTE_COLOR",
-        "defaultValue": "005500", // Dark Green
+        "defaultValue": "FFAA00",
         "label": "Accent Color",
-        "sunlight": false,
-        "options": [
-          { "label": "Dark Green", "value": "005500" },
-          { "label": "Black", "value": "000000" },
-          { "label": "White", "value": "FFFFFF" },
-          { "label": "Red", "value": "FF0000" },
-          { "label": "Blue", "value": "0000FF" }
-        ]
+        "sunlight": false
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_THEME_IS_DARK",
+        "label": "Dark Theme",
+        "defaultValue": true,
+        "description": "Enable to use a dark background with light text. This option is only available on color watches."
       }
     ]
   },
