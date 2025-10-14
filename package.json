@@ -34,6 +34,13 @@
     ],
     "resources": {
       "media": [
+        
+        {
+          "type": "bitmap",
+          "name": "IMAGE_MENU_ICON",
+          "file": "images/icon_launcher.png",
+          "menuIcon": true
+        },
         {
           "type": "bitmap",
           "name": "IMG_U0",
