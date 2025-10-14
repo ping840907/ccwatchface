@@ -128,12 +128,14 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
 
 #if defined(PBL_COLOR)
     // --- 彩色平台邏輯 ---
+    GColor text_color = s_is_dark_theme ? GColorWhite : GColorBlack;
+
     if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
         for (int i = 0; i < 8; i++) {
             if (gcolor_equal(palette[i], GColorRed)) {
                 palette[i] = s_accent_color;
             } else if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = GColorWhite;
+                palette[i] = text_color;
             }
         }
     } else if (display_layer == &s_minute_layers[1]) {
@@ -146,7 +148,7 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     } else {
         for (int i = 0; i < 4; i++) {
             if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = GColorWhite;
+                palette[i] = text_color;
                 break;
             }
         }
