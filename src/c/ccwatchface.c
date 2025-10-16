@@ -330,15 +330,12 @@ static void update_date(struct tm *tick_time) {
 
     uint32_t day_tens_res_id = 0;
     uint32_t day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
-    if (day = 10) {
-        day_tens_res_id = 0;
-    } else if (d2 != 0) {
-        day_tens_res_id = DATE_LOWERCASE_TENS_RESOURCES[d1];
-    } else {
-        day_tens_res_id = DATE_LOWERCASE_ONES_RESOURCES[d1];
-    }
 
-    uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_RI : DATE_LOWERCASE_ONES_RESOURCES[week];
+    if (day > 10) {
+        day_tens_res_id = (d2 == 0) ? DATE_LOWERCASE_ONES_RESOURCES[d1] : DATE_LOWERCASE_TENS_RESOURCES[d1];
+    }
+            
+    uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_SU1 : DATE_UPPERCASE_ONES_RESOURCES[week];
 
     set_display_layer_bitmap_animated(&s_month_layers[0], month_tens_res_id);
     set_display_layer_bitmap_animated(&s_month_layers[1], month_ones_res_id);
