@@ -37,7 +37,7 @@ This watch face is written in C using the Pebble SDK. The display is not rendere
 
 The reason why font import is not used is based on the font rendering size limitations of the Pebble SDK, also a big thank you to [俐方體11號](https://github.com/ACh-K/Cubic-11) and [方舟像素字体](https://github.com/TakWolf/ark-pixel-font), as I borrowed a lot from their designs in my own font style.
 
-## Asset Showcase
+## Asset Showcase (素材展示)
 
 | Color devices (`*C.png`) | B&W devices (`*D.png`) | Special Characters |
 | :---: | :---: | :---: |
