@@ -22,7 +22,7 @@
         "messageKey": "KEY_THEME_IS_DARK",
         "label": "Dark Theme",
         "defaultValue": true,
-        "description": "Enable to use a dark background with light text. This option is only available on color watches."
+        "description": "Enable to use a dark background with light text."
       }
     ]
   },
