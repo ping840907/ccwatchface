@@ -36,3 +36,34 @@ The date is displayed in a single row at the bottom of the screen.
 This watch face is written in C using the Pebble SDK. The display is not rendered using fonts. Instead, it dynamically assembles pre-rendered bitmap images for each Chinese character. Each digit or character you see on the screen is a separate image, and the C code calculates which images to display in which position based on the current time and date. This method ensures high-quality, stylized character rendering that is not dependent on system fonts.
 
 The reason why font import is not used is based on the font rendering size limitations of the Pebble SDK, also a big thank you to [俐方體11號](https://github.com/ACh-K/Cubic-11) and [方舟像素字体](https://github.com/TakWolf/ark-pixel-font), as I borrowed a lot from their designs in my own font style.
+
+## Asset Showcase
+
+| On color devices (`*C.png`) |On B&W devices (`*D.png`) | Special Characters |
+| :---: | :---: | :---: |
+| **Uppercase** | **Uppercase** | `dian.png` |
+| <img src="resources/time/u0C.png" width="48"> | <img src="resources/time/u0D.png" width="48"> | <img src="resources/time/dian.png" width="48"> |
+| <img src="resources/time/u1C.png" width="48"> | <img src="resources/time/u1D.png" width="48"> | |
+| <img src="resources/time/u2C.png" width="48"> | <img src="resources/time/u2D.png" width="48"> | `zheng.png` |
+| <img src="resources/time/u3C.png" width="48"> | <img src="resources/time/u3D.png" width="48"> | <img src="resources/time/zheng.png" width="48"> |
+| <img src="resources/time/u4C.png" width="48"> | <img src="resources/time/u4D.png" width="48"> | |
+| <img src="resources/time/u5C.png" width="48"> | <img src="resources/time/u5D.png" width="48"> | `ban.png` |
+| <img src="resources/time/u6C.png" width="48"> | <img src="resources/time/u6D.png" width="48"> | <img src="resources/time/ban.png" width="48"> |
+| <img src="resources/time/u7C.png" width="48"> | <img src="resources/time/u7D.png" width="48"> | |
+| <img src="resources/time/u8C.png" width="48"> | <img src="resources/time/u8D.png" width="48"> | |
+| <img src="resources/time/u9C.png" width="48"> | <img src="resources/time/u9D.png" width="48"> | |
+| <img src="resources/time/u10C.png" width="48"> | <img src="resources/time/u10D.png" width="48"> | |
+| *(No `l*C.png` files)* | **Lowercase** | |
+| | <img src="resources/time/l0D.png" width="48"> | |
+| | <img src="resources/time/l1D.png" width="48"> | |
+| | <img src="resources/time/l2D.png" width="48"> | |
+| | <img src="resources/time/l3D.png" width="48"> | |
+| | <img src="resources/time/l4D.png" width="48"> | |
+| | <img src="resources/time/l5D.png" width="48"> | |
+| | <img src="resources/time/l6D.png" width="48"> | |
+| | <img src="resources/time/l7D.png" width="48"> | |
+| | <img src="resources/time/l8D.png" width="48"> | |
+| | <img src="resources/time/l9D.png" width="48"> | |
+| | <img src="resources/time/l10D.png" width="48"> | |
+| | <img src="resources/time/l20D.png" width="48"> | |
+| | <img src="resources/time/l30D.png" width="48"> | |

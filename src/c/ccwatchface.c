@@ -332,7 +332,7 @@ static void update_date(struct tm *tick_time) {
     uint32_t day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
     if (day = 10) {
         day_tens_res_id = 0;
-    } elseif (d2 != 0) {
+    } else if (d2 != 0) {
         day_tens_res_id = DATE_LOWERCASE_TENS_RESOURCES[d1];
     } else {
         day_tens_res_id = DATE_LOWERCASE_ONES_RESOURCES[d1];
