@@ -329,22 +329,13 @@ static void update_date(struct tm *tick_time) {
     int d2 = day % 10;
 
     uint32_t day_tens_res_id = 0;
-    uint32_t day_ones_res_id = 0;
+    uint32_t day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
 
-    if (day <= 10) {
-        day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[day];
-        if (day == 10) {
-            day_tens_res_id = DATE_LOWERCASE_TENS_RESOURCES[1]; // 1 for "十"
-            day_ones_res_id = 0;
-        }
-    } else {
-        day_tens_res_id = DATE_LOWERCASE_TENS_RESOURCES[d1];
-        if (d2 != 0) {
-            day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
-        }
+    if (day > 10) {
+        day_tens_res_id = (d2 == 0) ? DATE_LOWERCASE_ONES_RESOURCES[d1] : DATE_LOWERCASE_TENS_RESOURCES[d1];
     }
-
-    uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_SU1 : DATE_UPPERCASE_ONES_RESOURCES[week]; // Sunday is 0, map to SU1 (日)
+            
+    uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_SU1 : DATE_UPPERCASE_ONES_RESOURCES[week];
 
     set_display_layer_bitmap_animated(&s_month_layers[0], month_tens_res_id);
     set_display_layer_bitmap_animated(&s_month_layers[1], month_ones_res_id);
