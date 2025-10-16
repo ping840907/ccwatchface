@@ -39,7 +39,7 @@ The reason why font import is not used is based on the font rendering size limit
 
 ## Asset Showcase
 
-| On color devices (`*C.png`) |On B&W devices (`*D.png`) | Special Characters |
+| Light Theme (`*C.png`) | Dark Theme (`*D.png`) | Special Characters |
 | :---: | :---: | :---: |
 | **Uppercase** | **Uppercase** | `dian.png` |
 | <img src="resources/time/u0C.png" width="48"> | <img src="resources/time/u0D.png" width="48"> | <img src="resources/time/dian.png" width="48"> |
