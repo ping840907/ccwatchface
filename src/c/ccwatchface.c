@@ -327,18 +327,15 @@ static void update_date(struct tm *tick_time) {
 
     int d1 = day / 10;
     int d2 = day % 10;
-    uint32_t day_tens_res_id = 0;
-    uint32_t day_ones_res_id = 0;
 
-    if (day == 10) {
-        day_tens_res_id = RESOURCE_ID_IMG_SL1;
-        day_ones_res_id = RESOURCE_ID_IMG_SL0;
-    } else if (d2 != 0) {
+    uint32_t day_tens_res_id = 0;
+    uint32_t day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
+    if (day = 10) {
+        day_tens_res_id = 0;
+    } elseif (d2 != 0) {
         day_tens_res_id = DATE_LOWERCASE_TENS_RESOURCES[d1];
-        day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
     } else {
         day_tens_res_id = DATE_LOWERCASE_ONES_RESOURCES[d1];
-        day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
     }
 
     uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_RI : DATE_LOWERCASE_ONES_RESOURCES[week];
