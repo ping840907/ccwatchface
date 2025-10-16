@@ -332,10 +332,17 @@ static void update_date(struct tm *tick_time) {
     uint32_t day_ones_res_id = DATE_LOWERCASE_ONES_RESOURCES[d2];
 
     if (day > 10) {
+        // 為了符合中文的數字念法，日期顯示邏輯比較特別：
+        // - 11~19: 「十」一、「十」二 ...
+        // - 20: 「二」「十」
+        // - 21~29: 「二十」一、「二十」二 ...
+        // - 30: 「三」「十」
+        // 因此，當個位數為 0 時（如 20, 30），十位數要用「二」、「三」的圖片，
+        // 而非「二十」、「三十」的圖片。
         day_tens_res_id = (d2 == 0) ? DATE_LOWERCASE_ONES_RESOURCES[d1] : DATE_LOWERCASE_TENS_RESOURCES[d1];
     }
             
-    uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_SU1 : DATE_UPPERCASE_ONES_RESOURCES[week];
+    uint32_t week_res_id = DATE_UPPERCASE_ONES_RESOURCES[week == 0 ? 7 : week];
 
     set_display_layer_bitmap_animated(&s_month_layers[0], month_tens_res_id);
     set_display_layer_bitmap_animated(&s_month_layers[1], month_ones_res_id);
