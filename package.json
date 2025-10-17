@@ -64,8 +64,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -90,8 +89,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -116,8 +114,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -142,8 +139,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -168,8 +164,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -194,8 +189,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -220,8 +214,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -246,8 +239,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -272,8 +264,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -298,8 +289,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -324,8 +314,7 @@
           "targetPlatforms": [
             "aplite",
             "diorite"
-          ],
-          "memoryFormat": "2bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -333,8 +322,7 @@
           "file": "time/dian.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -344,8 +332,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -353,8 +340,7 @@
           "file": "time/zheng.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -364,8 +350,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -373,8 +358,7 @@
           "file": "time/ban.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -384,8 +368,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -393,8 +376,7 @@
           "file": "time/l0.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -404,8 +386,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -413,8 +394,7 @@
           "file": "time/l1.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -424,8 +404,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -433,8 +412,7 @@
           "file": "time/l2.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -444,8 +422,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -453,8 +430,7 @@
           "file": "time/l3.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -464,8 +440,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -473,8 +448,7 @@
           "file": "time/l4.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -484,8 +458,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -493,8 +466,7 @@
           "file": "time/l5.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -504,8 +476,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -513,8 +484,7 @@
           "file": "time/l6.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -524,8 +494,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -533,8 +502,7 @@
           "file": "time/l7.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -544,8 +512,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -553,8 +520,7 @@
           "file": "time/l8.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -564,8 +530,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -573,8 +538,7 @@
           "file": "time/l9.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -584,8 +548,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -593,8 +556,7 @@
           "file": "time/l10.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -604,8 +566,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -613,8 +574,7 @@
           "file": "time/l20.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -624,8 +584,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -633,8 +592,7 @@
           "file": "time/l30.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -644,8 +602,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -653,8 +610,7 @@
           "file": "date/su1.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -664,8 +620,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -673,8 +628,7 @@
           "file": "date/su2.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -684,8 +638,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -693,8 +646,7 @@
           "file": "date/su3.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -704,8 +656,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -713,8 +664,7 @@
           "file": "date/su4.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -724,8 +674,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -733,8 +682,7 @@
           "file": "date/su5.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -744,8 +692,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -753,8 +700,7 @@
           "file": "date/su6.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -764,8 +710,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -773,8 +718,7 @@
           "file": "date/su7.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -784,8 +728,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -793,8 +736,7 @@
           "file": "date/su8.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -804,8 +746,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -813,8 +754,7 @@
           "file": "date/su9.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -824,8 +764,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -833,8 +772,7 @@
           "file": "date/su10.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -844,8 +782,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -853,8 +790,7 @@
           "file": "date/sl1.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -864,8 +800,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -873,8 +808,7 @@
           "file": "date/sl2.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -884,8 +818,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -893,8 +826,7 @@
           "file": "date/sl3.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -904,8 +836,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -913,8 +844,7 @@
           "file": "date/sl4.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -924,8 +854,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -933,8 +862,7 @@
           "file": "date/sl5.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -944,8 +872,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -953,8 +880,7 @@
           "file": "date/sl6.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -964,8 +890,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -973,8 +898,7 @@
           "file": "date/sl7.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -984,8 +908,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -993,8 +916,7 @@
           "file": "date/sl8.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1004,8 +926,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1013,8 +934,7 @@
           "file": "date/sl9.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1024,8 +944,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1033,8 +952,7 @@
           "file": "date/sl10.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1044,8 +962,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1053,8 +970,7 @@
           "file": "date/sl20.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1064,8 +980,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1073,8 +988,7 @@
           "file": "date/sl30.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1084,8 +998,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1093,8 +1006,7 @@
           "file": "date/yue.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1104,8 +1016,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1113,8 +1024,7 @@
           "file": "date/ri.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1124,8 +1034,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1133,8 +1042,7 @@
           "file": "date/zhou.png",
           "targetPlatforms": [
             "emery"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         },
         {
           "type": "bitmap",
@@ -1144,8 +1052,7 @@
             "aplite",
             "diorite",
             "basalt"
-          ],
-          "memoryFormat": "1bitpalette"
+          ]
         }
       ]
     }
