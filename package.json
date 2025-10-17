@@ -27,14 +27,14 @@
     },
     "messageKeys": {
       "KEY_MINUTE_COLOR": 0,
-      "KEY_THEME_IS_DARK": 1
+      "KEY_THEME_IS_DARK": 1,
+      "KEY_BW_ACCENT_OFF": 2
     },
     "capabilities": [
       "configurable"
     ],
     "resources": {
       "media": [
-        
         {
           "type": "bitmap",
           "name": "IMAGE_MENU_ICON",
@@ -65,7 +65,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -91,7 +91,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -117,7 +117,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -143,7 +143,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -169,7 +169,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -195,7 +195,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -221,7 +221,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -247,7 +247,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -273,7 +273,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -299,7 +299,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",
@@ -325,7 +325,7 @@
             "aplite",
             "diorite"
           ],
-          "memoryFormat": "1bitpalette"
+          "memoryFormat": "2bitpalette"
         },
         {
           "type": "bitmap",

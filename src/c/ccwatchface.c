@@ -16,6 +16,7 @@ typedef struct {
 static Window *s_main_window;
 static GColor s_accent_color;
 static bool s_is_dark_theme;
+static bool s_bw_accent_off;
 
 // Layers
 static DisplayLayer s_hour_layers[2];
@@ -31,6 +32,7 @@ static DisplayLayer s_zhou_layer;
 enum AppMessageKey {
     KEY_MINUTE_COLOR = 0,
     KEY_THEME_IS_DARK = 1,
+    KEY_BW_ACCENT_OFF = 2,
 };
 
 // ==================== 平台專屬佈局常數 ====================
@@ -155,17 +157,23 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     }
 #else
     // --- 黑白平台邏輯 ---
-    // 對於 1-bit 圖片，我們只改變黑色到白色，透明保持不變
-    if (s_is_dark_theme) {
-        // 尋找黑色並將其改為白色
-        for (int i = 0; i < 2; i++) {
-            if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = GColorWhite;
-                break;
-            }
+    // 根據主題決定主要顏色和跳色
+    GColor main_color = s_is_dark_theme ? GColorWhite : GColorBlack;
+    GColor accent_color = s_is_dark_theme ? GColorBlack : GColorWhite;
+
+    // 如果使用者關閉了跳色，則將跳色設為與主要顏色相同
+    if (s_bw_accent_off) {
+        accent_color = main_color;
+    }
+
+    // 遍歷調色盤（現在是 4 色，對應 2-bit 圖片）
+    for (int i = 0; i < 4; i++) {
+        if (gcolor_equal(palette[i], GColorBlack)) {
+            palette[i] = main_color;
+        } else if (gcolor_equal(palette[i], GColorWhite)) {
+            palette[i] = accent_color;
         }
     }
-    // 如果是淺色主題，圖片本身就是黑色的，所以無需操作
 #endif
 }
 
@@ -475,6 +483,15 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
         theme_changed = true;
     }
 
+    #if defined(PBL_BW)
+    Tuple *bw_accent_off_t = dict_find(iter, KEY_BW_ACCENT_OFF);
+    if (bw_accent_off_t) {
+        s_bw_accent_off = bw_accent_off_t->value->int32 == 1;
+        persist_write_bool(KEY_BW_ACCENT_OFF, s_bw_accent_off);
+        theme_changed = true;
+    }
+    #endif
+
     if (theme_changed) {
         update_theme();
     }
@@ -485,9 +502,10 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 static void init() {
     // 讀取儲存的設定
     s_accent_color = GColorFromHEX(persist_exists(KEY_MINUTE_COLOR) ? persist_read_int(KEY_MINUTE_COLOR) : 0xFFAA00);
-    
-    // 所有平台預設使用深色主題（黑色背景）
     s_is_dark_theme = persist_exists(KEY_THEME_IS_DARK) ? persist_read_bool(KEY_THEME_IS_DARK) : true;
+    #if defined(PBL_BW)
+    s_bw_accent_off = persist_exists(KEY_BW_ACCENT_OFF) ? persist_read_bool(KEY_BW_ACCENT_OFF) : false;
+    #endif
 
     s_main_window = window_create();
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
