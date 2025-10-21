@@ -2,12 +2,20 @@
 
 // ==================== 結構定義 ====================
 
+// 圖層類型枚舉，用於主題設定
+typedef enum {
+    LAYER_TYPE_NORMAL,        // 普通文字（深色主題下為白色，淺色為黑色）
+    LAYER_TYPE_HOUR,          // 小時（部分為強調色）
+    LAYER_TYPE_MINUTE_ACCENT, // 分鐘個位數（完全為強調色）
+} LayerType;
+
 // 顯示圖層結構
 typedef struct {
     BitmapLayer *layer;
     GBitmap *bitmap;
     uint32_t current_resource_id;
     PropertyAnimation *animation;
+    LayerType type; // 新增圖層類型
 } DisplayLayer;
 
 // 圖層配置結構（用於減少重複程式碼）
@@ -17,7 +25,7 @@ typedef struct {
     int w;
     int h;
     DisplayLayer *display_layer;
-    bool animated;
+    LayerType type; // 新增圖層類型
     uint32_t fixed_resource_id; // 0 表示非固定圖層
 } LayerConfig;
 
@@ -38,6 +46,9 @@ static DisplayLayer s_week_layer;
 static DisplayLayer s_yue_layer;
 static DisplayLayer s_ri_layer;
 static DisplayLayer s_zhou_layer;
+
+// 集中管理所有圖層的陣列
+static DisplayLayer *s_all_display_layers[12];
 
 // 設定儲存的 Key
 enum AppMessageKey {
@@ -134,6 +145,7 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 // Forward declaration
 static void update_time(struct tm *tick_time);
 static void update_date(struct tm *tick_time);
+static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id);
 
 // ==================== 主題 & 顏色邏輯 ====================
 
@@ -150,28 +162,36 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     // --- 彩色平台邏輯 ---
     GColor text_color = s_is_dark_theme ? GColorWhite : GColorBlack;
 
-    if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
-        for (int i = 0; i < PALETTE_SIZE; i++) {
-            if (gcolor_equal(palette[i], GColorRed)) {
-                palette[i] = s_accent_color;
-            } else if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = text_color;
+    switch (display_layer->type) {
+        case LAYER_TYPE_HOUR:
+            // 小時：紅色部分換成強調色，黑色部分換成主題文字顏色
+            for (int i = 0; i < PALETTE_SIZE; i++) {
+                if (gcolor_equal(palette[i], GColorRed)) {
+                    palette[i] = s_accent_color;
+                } else if (gcolor_equal(palette[i], GColorBlack)) {
+                    palette[i] = text_color;
+                }
             }
-        }
-    } else if (display_layer == &s_minute_layers[1]) {
-        for (int i = 0; i < PALETTE_SIZE; i++) {
-            if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = s_accent_color;
-                break;
+            break;
+        case LAYER_TYPE_MINUTE_ACCENT:
+            // 分鐘個位數：黑色部分直接換成強調色
+            for (int i = 0; i < PALETTE_SIZE; i++) {
+                if (gcolor_equal(palette[i], GColorBlack)) {
+                    palette[i] = s_accent_color;
+                    break;
+                }
             }
-        }
-    } else {
-        for (int i = 0; i < PALETTE_SIZE; i++) {
-            if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = text_color;
-                break;
+            break;
+        case LAYER_TYPE_NORMAL:
+        default:
+            // 其他：黑色部分換成主題文字顏色
+            for (int i = 0; i < PALETTE_SIZE; i++) {
+                if (gcolor_equal(palette[i], GColorBlack)) {
+                    palette[i] = text_color;
+                    break;
+                }
             }
-        }
+            break;
     }
 #else
     // --- 黑白平台邏輯 ---
@@ -258,10 +278,17 @@ static void cancel_animation(DisplayLayer *display_layer) {
     if (!display_layer) return;
     
     if (display_layer->animation) {
-        Animation *anim = (Animation *)display_layer->animation;
-        display_layer->animation = NULL;  // 先清空，避免 callback 重複處理
-        animation_unschedule(anim);
-        property_animation_destroy(anim);
+        // 先儲存指標，因為 property_animation_destroy 會釋放記憶體
+        PropertyAnimation *anim_to_destroy = display_layer->animation;
+
+        // 停止動畫排程
+        animation_unschedule((Animation*)anim_to_destroy);
+
+        // 設為 NULL 以防止重複銷毀
+        display_layer->animation = NULL;
+
+        // 銷毀動畫物件
+        property_animation_destroy(anim_to_destroy);
     }
 }
 
@@ -274,34 +301,23 @@ static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint3
     Layer *layer = bitmap_layer_get_layer(display_layer->layer);
     GRect current_frame = layer_get_frame(layer);
     
-    if (display_layer->current_resource_id == 0) { // First time setup
-        if (display_layer->bitmap) {
-            gbitmap_destroy(display_layer->bitmap);
-            display_layer->bitmap = NULL;
-        }
+    // 首次設定的特殊處理
+    if (display_layer->current_resource_id == 0 && resource_id != 0) {
+        // 直接設定 bitmap，不觸發 fade_out
+        set_display_layer_bitmap(display_layer, resource_id);
         
-        if (resource_id != 0) {
-            display_layer->bitmap = gbitmap_create_with_resource(resource_id);
-            if (!display_layer->bitmap) {
-                APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to load resource: %lu", resource_id);
-                return;
-            }
-        }
-        
-        apply_theme_to_layer(display_layer, display_layer->bitmap);
-        bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
-        display_layer->current_resource_id = resource_id;
-        
+        // 建立一個向上移動的初始動畫
         GRect target_frame = current_frame;
-        target_frame.origin.y -= FADE_OUT_DISTANCE;
-        display_layer->animation = property_animation_create_layer_frame(layer, &current_frame, &target_frame);
+        target_frame.origin.y -= FADE_OUT_DISTANCE; // 向上移動
         
+        display_layer->animation = property_animation_create_layer_frame(layer, &current_frame, &target_frame);
         if (display_layer->animation) {
-            animation_set_duration((Animation *)display_layer->animation, ANIMATION_DURATION_MS / 2);
-            animation_set_handlers((Animation *)display_layer->animation, (AnimationHandlers){.stopped = fade_in_stopped_handler}, display_layer);
-            animation_schedule((Animation *)display_layer->animation);
+            animation_set_duration((Animation*)display_layer->animation, ANIMATION_DURATION_MS);
+            animation_set_curve((Animation*)display_layer->animation, AnimationCurveEaseOut);
+            animation_set_handlers((Animation*)display_layer->animation, (AnimationHandlers){.stopped = fade_in_stopped_handler}, display_layer);
+            animation_schedule((Animation*)display_layer->animation);
         }
-        return;
+        return; // 完成初始設定，返回
     }
 
     display_layer->current_resource_id = resource_id;
@@ -436,12 +452,10 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 // ==================== UI 畫面建構 & 銷毀 ====================
 
-static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, bool animated) {
+static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, LayerType type) {
     if (!parent || !dl) return;
     
-    if (animated) {
-        bounds.origin.y += FADE_OUT_DISTANCE;
-    }
+    dl->type = type; // 設定圖層類型
     
     dl->layer = bitmap_layer_create(bounds);
     if (!dl->layer) {
@@ -482,19 +496,19 @@ static void main_window_load(Window *window) {
     // 定義所有圖層配置（減少重複程式碼）
     LayerConfig layer_configs[] = {
         // 時間圖層
-        { TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[0], true, 0 },
-        { TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[1], true, 0 },
-        { TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[0], true, 0 },
-        { TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[1], true, 0 },
+        { TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[0],    LAYER_TYPE_HOUR,          0 },
+        { TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[1],    LAYER_TYPE_HOUR,          0 },
+        { TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[0],  LAYER_TYPE_NORMAL,        0 },
+        { TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[1],  LAYER_TYPE_MINUTE_ACCENT, 0 },
         // 日期圖層
-        { DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[0], true, 0 },
-        { DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[1], true, 0 },
-        { DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_yue_layer, false, RESOURCE_ID_IMG_YUE },
-        { DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[0], true, 0 },
-        { DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[1], true, 0 },
-        { DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_ri_layer, false, RESOURCE_ID_IMG_RI },
-        { DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_zhou_layer, false, RESOURCE_ID_IMG_ZHOU },
-        { DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_week_layer, true, 0 },
+        { DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[0], LAYER_TYPE_NORMAL, 0 },
+        { DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[1], LAYER_TYPE_NORMAL, 0 },
+        { DATE_YUE_X,    DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_yue_layer,       LAYER_TYPE_NORMAL, RESOURCE_ID_IMG_YUE },
+        { DATE_DAY1_X,   DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[0],   LAYER_TYPE_NORMAL, 0 },
+        { DATE_DAY2_X,   DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[1],   LAYER_TYPE_NORMAL, 0 },
+        { DATE_RI_X,     DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_ri_layer,        LAYER_TYPE_NORMAL, RESOURCE_ID_IMG_RI },
+        { DATE_ZHOU_X,   DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_zhou_layer,      LAYER_TYPE_NORMAL, RESOURCE_ID_IMG_ZHOU },
+        { DATE_WEEK_X,   DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_week_layer,      LAYER_TYPE_NORMAL, 0 },
     };
 
     // 統一建立所有圖層
@@ -503,8 +517,11 @@ static void main_window_load(Window *window) {
         create_display_layer(window_layer, 
                            GRect(config->x, config->y, config->w, config->h),
                            config->display_layer,
-                           config->animated);
+                           config->type);
         
+        // 將建立好的圖層註冊到全域陣列中
+        s_all_display_layers[i] = config->display_layer;
+
         // 如果是固定圖層，立即載入 bitmap（記憶體效率優化）
         if (config->fixed_resource_id != 0) {
             set_display_layer_bitmap(config->display_layer, config->fixed_resource_id);
@@ -519,13 +536,8 @@ static void main_window_load(Window *window) {
 }
 
 static void main_window_unload(Window *window) {
-    DisplayLayer* all_layers[] = {
-        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
-        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
-        &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
-    };
-    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
-        destroy_display_layer(all_layers[i]);
+    for (size_t i = 0; i < ARRAY_LENGTH(s_all_display_layers); i++) {
+        destroy_display_layer(s_all_display_layers[i]);
     }
 }
 
@@ -545,13 +557,8 @@ static void update_theme() {
     
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
 
-    DisplayLayer* all_layers[] = {
-        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
-        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
-        &s_week_layer, &s_yue_layer, &s_ri_layer, &s_zhou_layer
-    };
-    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
-        refresh_layer_theme(all_layers[i]);
+    for (size_t i = 0; i < ARRAY_LENGTH(s_all_display_layers); i++) {
+        refresh_layer_theme(s_all_display_layers[i]);
     }
     
     // 重新顯示窗口
