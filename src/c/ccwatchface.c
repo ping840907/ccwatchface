@@ -114,7 +114,7 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 };
 
 // Forward declaration
-static void update_time();
+static void update_time(struct tm* tick_time);
 static void update_date(struct tm* tick_time);
 
 // ==================== 主題 & 顏色邏輯 ====================
@@ -286,7 +286,7 @@ static void update_time() {
         hour_ones_res_id = RESOURCE_ID_IMG_U0;
     } else {
         hour_ones_res_id = TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
-        if (hour >= 10) {
+        if (hour > 10) {
             hour_tens_res_id = TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
         }
     }
@@ -310,12 +310,9 @@ static void update_time() {
     } else if (minute == 10) {
         minute_tens_res_id = RESOURCE_ID_IMG_L1;
         minute_ones_res_id = RESOURCE_ID_IMG_L0;
-    } else if (m2 != 0) {
-        minute_tens_res_id = TIME_LOWERCASE_TENS_RESOURCES[m1];
-        minute_ones_res_id = TIME_LOWERCASE_ONES_RESOURCES[m2];
     } else {
-        minute_tens_res_id = TIME_LOWERCASE_ONES_RESOURCES[m1];
         minute_ones_res_id = TIME_LOWERCASE_ONES_RESOURCES[m2];
+        minute_tens_res_id = (m2 == 0) ? TIME_LOWERCASE_ONES_RESOURCES[m1] : TIME_LOWERCASE_TENS_RESOURCES[m1];
     }
 
     set_display_layer_bitmap_animated(&s_minute_layers[0], minute_tens_res_id);
