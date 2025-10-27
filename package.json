@@ -6,7 +6,8 @@
     "chinese",
     "watchface",
     "pixel",
-    "mandarin"
+    "mandarin",
+    "中文"
   ],
   "description": "A Chinese-themed watchface for Pebble with custom bitmap resources.",
   "license": "MIT",
