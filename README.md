@@ -1,6 +1,7 @@
 # Chinese Character Watchface (中文數字錶盤)
 
 ![image](display.jpg)
+
 [Pebble App Store](https://apps.repebble.com/en_US/application/68ee48a13e917c00090b923c)
 
 This is a watch face for Pebble smartwatches that displays the time and date using traditional Chinese characters. It offers a unique and elegant way to read the time, blending traditional aesthetics with modern technology.
