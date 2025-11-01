@@ -11,7 +11,9 @@
   ],
   "description": "A Chinese-themed watchface for Pebble with custom bitmap resources.",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "pebble-clay": "^1.0.4"
+  },
   "pebble": {
     "displayName": "CCWatchface",
     "uuid": "ce8bff31-737b-43df-9fb7-aed63e6970af",
@@ -34,6 +36,9 @@
     "capabilities": [
       "configurable"
     ],
+    "clay": {
+      "main": "src/js/app.js"
+    },
     "resources": {
       "media": [
         {

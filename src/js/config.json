@@ -11,18 +11,35 @@
         "defaultValue": "Colors"
       },
       {
-        "type": "toggle",
+        "type": "select",
         "messageKey": "KEY_THEME_IS_DARK",
-        "label": "Dark Theme",
-        "defaultValue": true,
-        "description": "Enable to use a dark background with light text."
+        "label": "Theme",
+        "defaultValue": "0",
+        "options": [
+          {
+            "label": "Light",
+            "value": "0"
+          },
+          {
+            "label": "Dark",
+            "value": "1"
+          }
+        ]
       },
       {
         "type": "color",
         "messageKey": "KEY_MINUTE_COLOR",
         "defaultValue": "FFAA00",
         "label": "Accent Color",
-        "sunlight": false
+        "sunlight": false,
+        "capabilities": ["COLOR"]
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_BW_ACCENT_OFF",
+        "label": "Disable Accent on B&W",
+        "defaultValue": false,
+        "capabilities": ["NOT_COLOR"]
       }
     ]
   },
