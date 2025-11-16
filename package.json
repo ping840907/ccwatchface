@@ -1,7 +1,7 @@
 {
   "name": "ccwatchface",
   "author": "Sloth8497",
-  "version": "1.6",
+  "version": "1.5",
   "keywords": [
     "chinese",
     "watchface",
@@ -23,9 +23,7 @@
       "aplite",
       "basalt",
       "diorite",
-      "flint",
-      "emery",
-      "flint"
+      "emery"
     ],
     "watchapp": {
       "watchface": true
@@ -71,8 +69,7 @@
           "file": "time/u0D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -97,8 +94,7 @@
           "file": "time/u1D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -123,8 +119,7 @@
           "file": "time/u2D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -149,8 +144,7 @@
           "file": "time/u3D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -175,8 +169,7 @@
           "file": "time/u4D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -201,8 +194,7 @@
           "file": "time/u5D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -227,8 +219,7 @@
           "file": "time/u6D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -253,8 +244,7 @@
           "file": "time/u7D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -279,8 +269,7 @@
           "file": "time/u8D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -305,8 +294,7 @@
           "file": "time/u9D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -331,8 +319,7 @@
           "file": "time/u10D.png",
           "targetPlatforms": [
             "aplite",
-            "diorite",
-            "flint"
+            "diorite"
           ]
         },
         {
@@ -350,7 +337,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -369,7 +355,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -388,7 +373,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -407,7 +391,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -426,7 +409,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -445,7 +427,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -464,7 +445,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -483,7 +463,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -502,7 +481,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -521,7 +499,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -540,7 +517,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -559,7 +535,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -578,7 +553,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -597,7 +571,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -616,7 +589,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -635,7 +607,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -654,7 +625,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -673,7 +643,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -692,7 +661,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -711,7 +679,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -730,7 +697,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -749,7 +715,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -768,7 +733,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -787,7 +751,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -806,7 +769,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -825,7 +787,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -844,7 +805,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -863,7 +823,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -882,7 +841,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -901,7 +859,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -920,7 +877,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -939,7 +895,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -958,7 +913,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -977,7 +931,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -996,7 +949,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -1015,7 +967,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -1034,7 +985,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -1053,7 +1003,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -1072,7 +1021,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -1091,7 +1039,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         },
@@ -1110,7 +1057,6 @@
           "targetPlatforms": [
             "aplite",
             "diorite",
-            "flint",
             "basalt"
           ]
         }
