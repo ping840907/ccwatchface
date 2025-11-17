@@ -18,7 +18,6 @@ typedef struct {
     int w;
     int h;
     DisplayLayer *display_layer;
-    bool animated;
     uint32_t fixed_resource_id; // 0 表示非固定圖層
 } LayerConfig;
 
@@ -534,19 +533,19 @@ static void main_window_load(Window *window) {
     // 定義所有圖層配置（減少重複程式碼）
     LayerConfig layer_configs[] = {
         // 時間圖層
-        { TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[0], true, 0 },
-        { TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[1], true, 0 },
-        { TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[0], true, 0 },
-        { TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[1], true, 0 },
+        { TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[0], 0 },
+        { TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[1], 0 },
+        { TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[0], 0 },
+        { TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[1], 0 },
         // 日期圖層
-        { DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[0], true, 0 },
-        { DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[1], true, 0 },
-        { DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_yue_layer, false, RESOURCE_ID_IMG_YUE },
-        { DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[0], true, 0 },
-        { DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[1], true, 0 },
-        { DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_ri_layer, false, RESOURCE_ID_IMG_RI },
-        { DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_zhou_layer, false, RESOURCE_ID_IMG_ZHOU },
-        { DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_week_layer, true, 0 },
+        { DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[0], 0 },
+        { DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[1], 0 },
+        { DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_yue_layer, RESOURCE_ID_IMG_YUE },
+        { DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[0], 0 },
+        { DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[1], 0 },
+        { DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_ri_layer, RESOURCE_ID_IMG_RI },
+        { DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_zhou_layer, RESOURCE_ID_IMG_ZHOU },
+        { DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_week_layer, 0 },
     };
 
     // 統一建立所有圖層
