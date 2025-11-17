@@ -40,6 +40,16 @@
         "label": "Disable Accent on B&W",
         "defaultValue": false,
         "capabilities": ["NOT_COLOR"]
+      },
+      {
+        "type": "heading",
+        "defaultValue": "Advanced"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_ANIMATION_ENABLED",
+        "label": "Enable Animations",
+        "defaultValue": true
       }
     ]
   },
