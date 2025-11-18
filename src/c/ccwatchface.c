@@ -8,6 +8,7 @@ typedef struct {
     GBitmap *bitmap;
     uint32_t current_resource_id;
     PropertyAnimation *animation;
+    GRect initial_bounds; // 新增：儲存圖層的初始幾何資訊
 } DisplayLayer;
 
 // 圖層配置結構（用於減少重複程式碼）
@@ -17,7 +18,6 @@ typedef struct {
     int w;
     int h;
     DisplayLayer *display_layer;
-    bool animated;
     uint32_t fixed_resource_id; // 0 表示非固定圖層
 } LayerConfig;
 
@@ -27,6 +27,7 @@ typedef struct {
 static Window *s_main_window;
 static GColor s_accent_color;
 static bool s_is_dark_theme;
+static bool s_animation_enabled; // 新增：動畫啟用狀態
 #if defined(PBL_BW)
 static bool s_bw_accent_off;
 #endif
@@ -46,6 +47,7 @@ enum AppMessageKey {
     KEY_MINUTE_COLOR = 0,
     KEY_THEME_IS_DARK = 1,
     KEY_BW_ACCENT_OFF = 2,
+    KEY_ANIMATION_ENABLED = 3, // 新增：動畫啟用/停用
 };
 
 // ==================== 平台專屬佈局常數 ====================
@@ -136,6 +138,7 @@ const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 // Forward declaration
 static void update_time(struct tm *tick_time);
 static void update_date(struct tm *tick_time);
+static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id);
 
 // ==================== 主題 & 顏色邏輯 ====================
 
@@ -267,6 +270,32 @@ static void cancel_animation(DisplayLayer *display_layer) {
     }
 }
 
+// 新增：無動畫的 bitmap 更新函式
+static void set_display_layer_bitmap_static(DisplayLayer *display_layer, uint32_t resource_id) {
+    if (!display_layer || !display_layer->layer) return;
+    if (display_layer->current_resource_id == resource_id) return;
+
+    cancel_animation(display_layer);
+    layer_set_frame(bitmap_layer_get_layer(display_layer->layer), display_layer->initial_bounds);
+
+    if (display_layer->bitmap) {
+        gbitmap_destroy(display_layer->bitmap);
+        display_layer->bitmap = NULL;
+    }
+
+    if (resource_id != 0) {
+        display_layer->bitmap = gbitmap_create_with_resource(resource_id);
+        if (!display_layer->bitmap) {
+            APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to load static resource: %lu", resource_id);
+            return;
+        }
+    }
+
+    apply_theme_to_layer(display_layer, display_layer->bitmap);
+    bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
+    display_layer->current_resource_id = resource_id;
+}
+
 static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id) {
     if (!display_layer || !display_layer->layer) return;
     if (display_layer->current_resource_id == resource_id) return;
@@ -320,6 +349,15 @@ static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint3
     }
 }
 
+// 新增：根據動畫設定選擇更新方式的分派函式
+static void update_display_layer(DisplayLayer *display_layer, uint32_t resource_id) {
+    if (s_animation_enabled) {
+        set_display_layer_bitmap_animated(display_layer, resource_id);
+    } else {
+        set_display_layer_bitmap_static(display_layer, resource_id);
+    }
+}
+
 static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id) {
     if (!display_layer) return;
     
@@ -367,8 +405,8 @@ static void update_time(struct tm *tick_time) {
         }
     }
 
-    set_display_layer_bitmap_animated(&s_hour_layers[0], hour_tens_res_id);
-    set_display_layer_bitmap_animated(&s_hour_layers[1], hour_ones_res_id);
+    update_display_layer(&s_hour_layers[0], hour_tens_res_id);
+    update_display_layer(&s_hour_layers[1], hour_ones_res_id);
 
     int minute = tick_time->tm_min;
     int m1 = minute / 10;
@@ -391,8 +429,8 @@ static void update_time(struct tm *tick_time) {
         minute_ones_res_id = TIME_LOWERCASE_ONES_RESOURCES[m2];
     }
 
-    set_display_layer_bitmap_animated(&s_minute_layers[0], minute_tens_res_id);
-    set_display_layer_bitmap_animated(&s_minute_layers[1], minute_ones_res_id);
+    update_display_layer(&s_minute_layers[0], minute_tens_res_id);
+    update_display_layer(&s_minute_layers[1], minute_ones_res_id);
 }
 
 static void update_date(struct tm *tick_time) {
@@ -419,11 +457,11 @@ static void update_date(struct tm *tick_time) {
     }
             
     uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_RI : DATE_LOWERCASE_ONES_RESOURCES[week];
-    set_display_layer_bitmap_animated(&s_month_layers[0], month_tens_res_id);
-    set_display_layer_bitmap_animated(&s_month_layers[1], month_ones_res_id);
-    set_display_layer_bitmap_animated(&s_day_layers[0], day_tens_res_id);
-    set_display_layer_bitmap_animated(&s_day_layers[1], day_ones_res_id);
-    set_display_layer_bitmap_animated(&s_week_layer, week_res_id);
+    update_display_layer(&s_month_layers[0], month_tens_res_id);
+    update_display_layer(&s_month_layers[1], month_ones_res_id);
+    update_display_layer(&s_day_layers[0], day_tens_res_id);
+    update_display_layer(&s_day_layers[1], day_ones_res_id);
+    update_display_layer(&s_week_layer, week_res_id);
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
@@ -435,13 +473,30 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 // ==================== UI 畫面建構 & 銷毀 ====================
 
-static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl, bool animated) {
+// 新增：根據動畫狀態更新所有圖層位置
+static void update_layer_positions(bool is_animated) {
+    DisplayLayer* animated_layers[] = {
+        &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
+        &s_month_layers[0], &s_month_layers[1], &s_day_layers[0], &s_day_layers[1],
+        &s_week_layer
+    };
+
+    for (size_t i = 0; i < ARRAY_LENGTH(animated_layers); i++) {
+        DisplayLayer *dl = animated_layers[i];
+        if (dl && dl->layer) {
+            GRect target_frame = dl->initial_bounds;
+            if (is_animated) {
+                target_frame.origin.y += FADE_OUT_DISTANCE;
+            }
+            layer_set_frame(bitmap_layer_get_layer(dl->layer), target_frame);
+        }
+    }
+}
+
+static void create_display_layer(Layer *parent, GRect bounds, DisplayLayer *dl) {
     if (!parent || !dl) return;
     
-    if (animated) {
-        bounds.origin.y += FADE_OUT_DISTANCE;
-    }
-    
+    dl->initial_bounds = bounds; // 儲存初始位置
     dl->layer = bitmap_layer_create(bounds);
     if (!dl->layer) {
         APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to create bitmap layer");
@@ -481,19 +536,19 @@ static void main_window_load(Window *window) {
     // 定義所有圖層配置（減少重複程式碼）
     LayerConfig layer_configs[] = {
         // 時間圖層
-        { TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[0], true, 0 },
-        { TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[1], true, 0 },
-        { TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[0], true, 0 },
-        { TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[1], true, 0 },
+        { TIME_COL1_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[0], 0 },
+        { TIME_COL2_X, TIME_ROW1_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_hour_layers[1], 0 },
+        { TIME_COL1_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[0], 0 },
+        { TIME_COL2_X, TIME_ROW2_Y, TIME_IMAGE_SIZE.w, TIME_IMAGE_SIZE.h, &s_minute_layers[1], 0 },
         // 日期圖層
-        { DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[0], true, 0 },
-        { DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[1], true, 0 },
-        { DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_yue_layer, false, RESOURCE_ID_IMG_YUE },
-        { DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[0], true, 0 },
-        { DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[1], true, 0 },
-        { DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_ri_layer, false, RESOURCE_ID_IMG_RI },
-        { DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_zhou_layer, false, RESOURCE_ID_IMG_ZHOU },
-        { DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_week_layer, true, 0 },
+        { DATE_MONTH1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[0], 0 },
+        { DATE_MONTH2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_month_layers[1], 0 },
+        { DATE_YUE_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_yue_layer, RESOURCE_ID_IMG_YUE },
+        { DATE_DAY1_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[0], 0 },
+        { DATE_DAY2_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_day_layers[1], 0 },
+        { DATE_RI_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_ri_layer, RESOURCE_ID_IMG_RI },
+        { DATE_ZHOU_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_zhou_layer, RESOURCE_ID_IMG_ZHOU },
+        { DATE_WEEK_X, DATE_ROW_Y, DATE_IMAGE_SIZE.w, DATE_IMAGE_SIZE.h, &s_week_layer, 0 },
     };
 
     // 統一建立所有圖層
@@ -501,14 +556,16 @@ static void main_window_load(Window *window) {
         LayerConfig *config = &layer_configs[i];
         create_display_layer(window_layer, 
                            GRect(config->x, config->y, config->w, config->h),
-                           config->display_layer,
-                           config->animated);
+                           config->display_layer);
         
         // 如果是固定圖層，立即載入 bitmap（記憶體效率優化）
         if (config->fixed_resource_id != 0) {
             set_display_layer_bitmap(config->display_layer, config->fixed_resource_id);
         }
     }
+
+    // 根據動畫設定來決定圖層的初始位置
+    update_layer_positions(s_animation_enabled);
 
     // 初次更新時間和日期
     time_t now = time(NULL);
@@ -588,6 +645,13 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     if (theme_changed) {
         update_theme();
     }
+
+    Tuple *animation_t = dict_find(iter, KEY_ANIMATION_ENABLED);
+    if (animation_t) {
+        s_animation_enabled = animation_t->value->int32 == 1;
+        persist_write_bool(KEY_ANIMATION_ENABLED, s_animation_enabled);
+        update_layer_positions(s_animation_enabled);
+    }
 }
 
 static void inbox_dropped_handler(AppMessageResult reason, void *context) {
@@ -610,6 +674,11 @@ static void init() {
         s_is_dark_theme = true; // 預設為深色主題
     }
     
+    s_animation_enabled = persist_read_bool(KEY_ANIMATION_ENABLED);
+    if (!persist_exists(KEY_ANIMATION_ENABLED)) {
+        s_animation_enabled = true; // 預設啟用動畫
+    }
+
     #if defined(PBL_BW)
     s_bw_accent_off = persist_read_bool(KEY_BW_ACCENT_OFF);
     #endif
