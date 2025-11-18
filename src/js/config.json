@@ -14,7 +14,7 @@
         "type": "select",
         "messageKey": "KEY_THEME_IS_DARK",
         "label": "Theme",
-        "defaultValue": "0",
+        "defaultValue": "1",
         "options": [
           {
             "label": "Light",
