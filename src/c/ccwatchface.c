@@ -275,6 +275,9 @@ static void set_display_layer_bitmap_static(DisplayLayer *display_layer, uint32_
     if (!display_layer || !display_layer->layer) return;
     if (display_layer->current_resource_id == resource_id) return;
 
+    cancel_animation(display_layer);
+    layer_set_frame(bitmap_layer_get_layer(display_layer->layer), display_layer->initial_bounds);
+
     if (display_layer->bitmap) {
         gbitmap_destroy(display_layer->bitmap);
         display_layer->bitmap = NULL;
