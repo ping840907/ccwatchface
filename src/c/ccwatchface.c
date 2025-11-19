@@ -26,7 +26,12 @@ typedef struct {
 // UI
 static Window *s_main_window;
 static GColor s_accent_color;
+#if defined(PBL_COLOR)
+static GColor s_background_color;
+static GColor s_text_color;
+#else
 static bool s_is_dark_theme;
+#endif
 static bool s_animation_enabled; // 新增：動畫啟用狀態
 #if defined(PBL_BW)
 static bool s_bw_accent_off;
@@ -48,6 +53,8 @@ enum AppMessageKey {
     KEY_THEME_IS_DARK = 1,
     KEY_BW_ACCENT_OFF = 2,
     KEY_ANIMATION_ENABLED = 3, // 新增：動畫啟用/停用
+    KEY_BACKGROUND_COLOR = 4,
+    KEY_TEXT_COLOR = 5,
 };
 
 // ==================== 平台專屬佈局常數 ====================
@@ -153,14 +160,12 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
 
 #if defined(PBL_COLOR)
     // --- 彩色平台邏輯 ---
-    GColor text_color = s_is_dark_theme ? GColorWhite : GColorBlack;
-
     if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
         for (int i = 0; i < PALETTE_SIZE; i++) {
             if (gcolor_equal(palette[i], GColorRed)) {
                 palette[i] = s_accent_color;
             } else if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = text_color;
+                palette[i] = s_text_color;
             }
         }
     } else if (display_layer == &s_minute_layers[1]) {
@@ -173,7 +178,7 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     } else {
         for (int i = 0; i < PALETTE_SIZE; i++) {
             if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = text_color;
+                palette[i] = s_text_color;
                 break;
             }
         }
@@ -599,7 +604,11 @@ static void update_theme() {
     Layer *root_layer = window_get_root_layer(s_main_window);
     layer_set_hidden(root_layer, true);
     
+#if defined(PBL_COLOR)
+    window_set_background_color(s_main_window, s_background_color);
+#else
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
+#endif
 
     DisplayLayer* all_layers[] = {
         &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
@@ -619,12 +628,28 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     
     bool theme_changed = false;
 
+#if defined(PBL_COLOR)
+    Tuple *bg_color_t = dict_find(iter, KEY_BACKGROUND_COLOR);
+    if (bg_color_t) {
+        s_background_color = GColorFromHEX(bg_color_t->value->int32);
+        persist_write_int(KEY_BACKGROUND_COLOR, bg_color_t->value->int32);
+        theme_changed = true;
+    }
+
+    Tuple *text_color_t = dict_find(iter, KEY_TEXT_COLOR);
+    if (text_color_t) {
+        s_text_color = GColorFromHEX(text_color_t->value->int32);
+        persist_write_int(KEY_TEXT_COLOR, text_color_t->value->int32);
+        theme_changed = true;
+    }
+#else
     Tuple *theme_t = dict_find(iter, KEY_THEME_IS_DARK);
     if (theme_t) {
         s_is_dark_theme = theme_t->value->int32 == 1;
         persist_write_bool(KEY_THEME_IS_DARK, s_is_dark_theme);
         theme_changed = true;
     }
+#endif
 
     Tuple *accent_color_t = dict_find(iter, KEY_MINUTE_COLOR);
     if (accent_color_t) {
@@ -669,10 +694,18 @@ static void init() {
     int stored_color = persist_read_int(KEY_MINUTE_COLOR);
     s_accent_color = GColorFromHEX(stored_color != 0 ? stored_color : 0xFFAA00);
     
+#if defined(PBL_COLOR)
+    int bg_color = persist_read_int(KEY_BACKGROUND_COLOR);
+    s_background_color = GColorFromHEX(bg_color != 0 ? bg_color : 0x000000); // 預設黑色
+
+    int text_color = persist_read_int(KEY_TEXT_COLOR);
+    s_text_color = GColorFromHEX(text_color != 0 ? text_color : 0xFFFFFF); // 預設白色
+#else
     s_is_dark_theme = persist_read_bool(KEY_THEME_IS_DARK);
     if (!persist_exists(KEY_THEME_IS_DARK)) {
         s_is_dark_theme = true; // 預設為深色主題
     }
+#endif
     
     s_animation_enabled = persist_read_bool(KEY_ANIMATION_ENABLED);
     if (!persist_exists(KEY_ANIMATION_ENABLED)) {
@@ -689,7 +722,11 @@ static void init() {
         return;
     }
     
+#if defined(PBL_COLOR)
+    window_set_background_color(s_main_window, s_background_color);
+#else
     window_set_background_color(s_main_window, s_is_dark_theme ? GColorBlack : GColorWhite);
+#endif
     window_set_window_handlers(s_main_window, (WindowHandlers) {
         .load = main_window_load,
         .unload = main_window_unload,
