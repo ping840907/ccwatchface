@@ -11,20 +11,20 @@
         "defaultValue": "Colors"
       },
       {
-        "type": "select",
-        "messageKey": "KEY_THEME_IS_DARK",
-        "label": "Theme",
-        "defaultValue": "1",
-        "options": [
-          {
-            "label": "Light",
-            "value": "0"
-          },
-          {
-            "label": "Dark",
-            "value": "1"
-          }
-        ]
+        "type": "color",
+        "messageKey": "KEY_BACKGROUND_COLOR",
+        "defaultValue": "000000",
+        "label": "Background Color",
+        "sunlight": false,
+        "capabilities": ["COLOR"]
+      },
+      {
+        "type": "color",
+        "messageKey": "KEY_TEXT_COLOR",
+        "defaultValue": "FFFFFF",
+        "label": "Text Color",
+        "sunlight": false,
+        "capabilities": ["COLOR"]
       },
       {
         "type": "color",
