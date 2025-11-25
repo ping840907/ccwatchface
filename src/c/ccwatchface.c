@@ -26,6 +26,7 @@ typedef struct {
 // UI
 static Window *s_main_window;
 static GColor s_accent_color;
+static GColor s_hour_accent_color; // 新增：小時強調色
 #if defined(PBL_COLOR)
 static GColor s_background_color;
 static GColor s_text_color;
@@ -50,6 +51,7 @@ static DisplayLayer s_zhou_layer;
 // 設定儲存的 Key
 enum AppMessageKey {
     KEY_MINUTE_COLOR = 0,
+    KEY_HOUR_COLOR = 6, // 新增 Key
     KEY_THEME_IS_DARK = 1,
     KEY_BW_ACCENT_OFF = 2,
     KEY_ANIMATION_ENABLED = 3, // 新增：動畫啟用/停用
@@ -163,7 +165,7 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     if (display_layer == &s_hour_layers[0] || display_layer == &s_hour_layers[1]) {
         for (int i = 0; i < PALETTE_SIZE; i++) {
             if (gcolor_equal(palette[i], GColorRed)) {
-                palette[i] = s_accent_color;
+                palette[i] = s_hour_accent_color; // 使用小時的強調色
             } else if (gcolor_equal(palette[i], GColorBlack)) {
                 palette[i] = s_text_color;
             }
@@ -658,6 +660,13 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
         theme_changed = true;
     }
 
+    Tuple *hour_color_t = dict_find(iter, KEY_HOUR_COLOR);
+    if (hour_color_t) {
+        s_hour_accent_color = GColorFromHEX(hour_color_t->value->int32);
+        persist_write_int(KEY_HOUR_COLOR, hour_color_t->value->int32);
+        theme_changed = true;
+    }
+
     #if defined(PBL_BW)
     Tuple *bw_accent_off_t = dict_find(iter, KEY_BW_ACCENT_OFF);
     if (bw_accent_off_t) {
@@ -695,6 +704,8 @@ static void init() {
     s_accent_color = GColorFromHEX(stored_color != 0 ? stored_color : 0xFFAA00);
     
 #if defined(PBL_COLOR)
+    int hour_color = persist_read_int(KEY_HOUR_COLOR);
+    s_hour_accent_color = GColorFromHEX(hour_color != 0 ? hour_color : 0xFFAA00);
     int bg_color = persist_read_int(KEY_BACKGROUND_COLOR);
     s_background_color = GColorFromHEX(bg_color != 0 ? bg_color : 0x000000); // 預設黑色
 
