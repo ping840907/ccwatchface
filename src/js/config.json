@@ -16,7 +16,9 @@
         "defaultValue": "000000",
         "label": "Background Color",
         "sunlight": false,
-        "capabilities": ["COLOR"]
+        "capabilities": [
+          "COLOR"
+        ]
       },
       {
         "type": "color",
@@ -24,7 +26,9 @@
         "defaultValue": "FFFFFF",
         "label": "Text Color",
         "sunlight": false,
-        "capabilities": ["COLOR"]
+        "capabilities": [
+          "COLOR"
+        ]
       },
       {
         "type": "color",
@@ -32,7 +36,9 @@
         "defaultValue": "FFAA00",
         "label": "Hour Accent Color",
         "sunlight": false,
-        "capabilities": ["COLOR"]
+        "capabilities": [
+          "COLOR"
+        ]
       },
       {
         "type": "color",
@@ -40,14 +46,27 @@
         "defaultValue": "FFAA00",
         "label": "Minute Accent Color",
         "sunlight": false,
-        "capabilities": ["COLOR"]
+        "capabilities": [
+          "COLOR"
+        ]
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_THEME_IS_DARK",
+        "label": "Dark Theme",
+        "defaultValue": true,
+        "capabilities": [
+          "NOT_COLOR"
+        ]
       },
       {
         "type": "toggle",
         "messageKey": "KEY_BW_ACCENT_OFF",
         "label": "Disable Accent on B&W",
         "defaultValue": false,
-        "capabilities": ["NOT_COLOR"]
+        "capabilities": [
+          "NOT_COLOR"
+        ]
       },
       {
         "type": "heading",
