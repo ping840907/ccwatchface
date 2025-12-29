@@ -25,7 +25,7 @@ typedef struct {
 
 // UI
 static Window *s_main_window;
-static GColor s_accent_color;
+static GColor s_minute_accent_color;
 static GColor s_hour_accent_color; // 小時強調色
 #if defined(PBL_COLOR)
 static GColor s_background_color;
@@ -180,7 +180,7 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
     } else if (display_layer == &s_minute_layers[1]) {
         for (int i = 0; i < PALETTE_SIZE; i++) {
             if (gcolor_equal(palette[i], GColorBlack)) {
-                palette[i] = s_accent_color;
+                palette[i] = s_minute_accent_color;
                 break;
             }
         }
@@ -630,7 +630,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 
     Tuple *accent_color_t = dict_find(iter, KEY_MINUTE_COLOR);
     if (accent_color_t) {
-        s_accent_color = GColorFromHEX(accent_color_t->value->int32);
+        s_minute_accent_color = GColorFromHEX(accent_color_t->value->int32);
         persist_write_int(KEY_MINUTE_COLOR, accent_color_t->value->int32);
         theme_changed = true;
     }
@@ -677,7 +677,7 @@ static void outbox_failed_handler(DictionaryIterator *iterator, AppMessageResult
 static void init() {
     // 讀取儲存的設定（優化 persist_exists 檢查）
     int stored_color = persist_read_int(KEY_MINUTE_COLOR);
-    s_accent_color = GColorFromHEX(stored_color != 0 ? stored_color : 0xFFAA00);
+    s_minute_accent_color = GColorFromHEX(stored_color != 0 ? stored_color : 0xFFAA00);
     
 #if defined(PBL_COLOR)
     int hour_color = persist_read_int(KEY_HOUR_COLOR);
