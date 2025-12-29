@@ -8,7 +8,7 @@ typedef struct {
     GBitmap *bitmap;
     uint32_t current_resource_id;
     PropertyAnimation *animation;
-    GRect initial_bounds; // 新增：儲存圖層的初始幾何資訊
+    GRect initial_bounds; // 儲存圖層的初始幾何資訊
 } DisplayLayer;
 
 // 圖層配置結構（用於減少重複程式碼）
@@ -26,14 +26,14 @@ typedef struct {
 // UI
 static Window *s_main_window;
 static GColor s_accent_color;
-static GColor s_hour_accent_color; // 新增：小時強調色
+static GColor s_hour_accent_color; // 小時強調色
 #if defined(PBL_COLOR)
 static GColor s_background_color;
 static GColor s_text_color;
 #else
 static bool s_is_dark_theme;
 #endif
-static bool s_animation_enabled; // 新增：動畫啟用狀態
+static bool s_animation_enabled; // 動畫啟用狀態
 #if defined(PBL_BW)
 static bool s_bw_accent_off;
 #endif
@@ -51,10 +51,10 @@ static DisplayLayer s_zhou_layer;
 // 設定儲存的 Key
 enum AppMessageKey {
     KEY_MINUTE_COLOR = 0,
-    KEY_HOUR_COLOR = 6, // 新增 Key
+    KEY_HOUR_COLOR = 6,
     KEY_THEME_IS_DARK = 1,
     KEY_BW_ACCENT_OFF = 2,
-    KEY_ANIMATION_ENABLED = 3, // 新增：動畫啟用/停用
+    KEY_ANIMATION_ENABLED = 3, // 動畫啟用/停用
     KEY_BACKGROUND_COLOR = 4,
     KEY_TEXT_COLOR = 5,
 };
@@ -113,38 +113,45 @@ enum AppMessageKey {
 
 // ==================== 圖片資源映射表 ====================
 
+// 時間十位數（大寫數字）資源對照表
 const uint32_t TIME_UPPERCASE_TENS_RESOURCES[] = {
     0, RESOURCE_ID_IMG_U10, RESOURCE_ID_IMG_U2,
 };
+// 時間個位數（大寫數字）資源對照表
 const uint32_t TIME_UPPERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_U10, RESOURCE_ID_IMG_U1, RESOURCE_ID_IMG_U2, RESOURCE_ID_IMG_U3,
     RESOURCE_ID_IMG_U4, RESOURCE_ID_IMG_U5, RESOURCE_ID_IMG_U6, RESOURCE_ID_IMG_U7,
     RESOURCE_ID_IMG_U8, RESOURCE_ID_IMG_U9
 };
+// 分鐘十位數（小寫數字）資源對照表
 const uint32_t TIME_LOWERCASE_TENS_RESOURCES[] = {
     RESOURCE_ID_IMG_L0, RESOURCE_ID_IMG_L10, RESOURCE_ID_IMG_L20, RESOURCE_ID_IMG_L30,
     RESOURCE_ID_IMG_L4, RESOURCE_ID_IMG_L5,
 };
+// 分鐘個位數（小寫數字）資源對照表
 const uint32_t TIME_LOWERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_L10, RESOURCE_ID_IMG_L1, RESOURCE_ID_IMG_L2, RESOURCE_ID_IMG_L3,
     RESOURCE_ID_IMG_L4, RESOURCE_ID_IMG_L5, RESOURCE_ID_IMG_L6, RESOURCE_ID_IMG_L7,
     RESOURCE_ID_IMG_L8, RESOURCE_ID_IMG_L9
 };
+// 日期/月份個位數（大寫數字）資源對照表
 const uint32_t DATE_UPPERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_SU10, RESOURCE_ID_IMG_SU1, RESOURCE_ID_IMG_SU2, RESOURCE_ID_IMG_SU3,
     RESOURCE_ID_IMG_SU4, RESOURCE_ID_IMG_SU5, RESOURCE_ID_IMG_SU6, RESOURCE_ID_IMG_SU7,
     RESOURCE_ID_IMG_SU8, RESOURCE_ID_IMG_SU9
 };
+// 日期十位數（小寫數字）資源對照表
 const uint32_t DATE_LOWERCASE_TENS_RESOURCES[] = {
     0, RESOURCE_ID_IMG_SL10, RESOURCE_ID_IMG_SL20, RESOURCE_ID_IMG_SL30,
 };
+// 日期個位數（小寫數字）資源對照表
 const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
     RESOURCE_ID_IMG_SL10, RESOURCE_ID_IMG_SL1, RESOURCE_ID_IMG_SL2, RESOURCE_ID_IMG_SL3,
     RESOURCE_ID_IMG_SL4, RESOURCE_ID_IMG_SL5, RESOURCE_ID_IMG_SL6, RESOURCE_ID_IMG_SL7,
     RESOURCE_ID_IMG_SL8, RESOURCE_ID_IMG_SL9,
 };
 
-// Forward declaration
+// 前向宣告 (Forward declaration)
 static void update_time(struct tm *tick_time);
 static void update_date(struct tm *tick_time);
 static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id);
@@ -286,7 +293,7 @@ static void fade_out_stopped_handler(Animation *animation, bool finished, void *
     animation_schedule((Animation *)dl->animation);
 }
 
-// 新增：無動畫的 bitmap 更新函式
+// 無動畫的 bitmap 更新函式
 static void set_display_layer_bitmap_static(DisplayLayer *display_layer, uint32_t resource_id) {
     if (!display_layer || !display_layer->layer) return;
     if (display_layer->current_resource_id == resource_id) return;
@@ -335,7 +342,7 @@ static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint3
     }
 }
 
-// 新增：根據動畫設定選擇更新方式的分派函式
+// 根據動畫設定選擇更新方式的分派函式
 static void update_display_layer(DisplayLayer *display_layer, uint32_t resource_id) {
     if (s_animation_enabled) {
         set_display_layer_bitmap_animated(display_layer, resource_id);
@@ -346,9 +353,11 @@ static void update_display_layer(DisplayLayer *display_layer, uint32_t resource_
 
 // ==================== 時間 & 日期更新 ====================
 
+// 更新時間顯示邏輯：處理 12/24 小時制轉換與圖片選擇
 static void update_time(struct tm *tick_time) {
     if (!tick_time) return;
 
+    // 處理小時
     int hour = tick_time->tm_hour;
     if (!clock_is_24h_style()) {
         if (hour == 0) {
@@ -361,7 +370,7 @@ static void update_time(struct tm *tick_time) {
     uint32_t hour_tens_res_id = 0;
     uint32_t hour_ones_res_id = 0;
 
-    if (hour == 0) { // For 24h format 00:xx
+    if (hour == 0) { // 用於 24 小時制的 00:xx
         hour_ones_res_id = RESOURCE_ID_IMG_U0;
     } else {
         hour_ones_res_id = TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
@@ -373,6 +382,7 @@ static void update_time(struct tm *tick_time) {
     update_display_layer(&s_hour_layers[0], hour_tens_res_id);
     update_display_layer(&s_hour_layers[1], hour_ones_res_id);
 
+    // 處理分鐘
     int minute = tick_time->tm_min;
     int m1 = minute / 10;
     int m2 = minute % 10;
@@ -380,6 +390,7 @@ static void update_time(struct tm *tick_time) {
     uint32_t minute_tens_res_id = 0;
     uint32_t minute_ones_res_id = 0;
 
+    // 特殊分鐘顯示邏輯（整點、半點等）
     if (minute == 0) {
         minute_tens_res_id = RESOURCE_ID_IMG_DIAN;
         minute_ones_res_id = RESOURCE_ID_IMG_ZHENG;
@@ -398,6 +409,7 @@ static void update_time(struct tm *tick_time) {
     update_display_layer(&s_minute_layers[1], minute_ones_res_id);
 }
 
+// 更新日期顯示邏輯：拆解月份與日期數字
 static void update_date(struct tm *tick_time) {
     if (!tick_time) return;
 
@@ -405,12 +417,14 @@ static void update_date(struct tm *tick_time) {
     int day = tick_time->tm_mday;
     int week = tick_time->tm_wday;
 
+    // 處理月份
     uint32_t month_tens_res_id = 0;
     uint32_t month_ones_res_id = DATE_UPPERCASE_ONES_RESOURCES[month % 10];
     if (month > 10) {
         month_tens_res_id = RESOURCE_ID_IMG_SU10;
     }
 
+    // 處理日期
     int d1 = day / 10;
     int d2 = day % 10;
 
@@ -421,7 +435,9 @@ static void update_date(struct tm *tick_time) {
         day_tens_res_id = (d2 == 0) ? DATE_LOWERCASE_ONES_RESOURCES[d1] : DATE_LOWERCASE_TENS_RESOURCES[d1];
     }
             
+    // 處理星期
     uint32_t week_res_id = (week == 0) ? RESOURCE_ID_IMG_RI : DATE_LOWERCASE_ONES_RESOURCES[week];
+
     update_display_layer(&s_month_layers[0], month_tens_res_id);
     update_display_layer(&s_month_layers[1], month_ones_res_id);
     update_display_layer(&s_day_layers[0], day_tens_res_id);
@@ -438,7 +454,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 // ==================== UI 畫面建構 & 銷毀 ====================
 
-// 新增：根據動畫狀態更新所有圖層位置
+// 根據動畫狀態更新所有圖層位置
 static void update_layer_positions(bool is_animated) {
     DisplayLayer* animated_layers[] = {
         &s_hour_layers[0], &s_hour_layers[1], &s_minute_layers[0], &s_minute_layers[1],
@@ -583,6 +599,7 @@ static void update_theme() {
     layer_set_hidden(root_layer, false);
 }
 
+// 接收 AppMessage 設定變更：處理手機端傳來的設定值
 static void inbox_received_handler(DictionaryIterator *iter, void *context) {
     if (!iter) return;
     
@@ -656,6 +673,7 @@ static void outbox_failed_handler(DictionaryIterator *iterator, AppMessageResult
 
 // ==================== 應用程式生命週期 ====================
 
+// 初始化應用程式：載入設定、建立視窗、註冊服務
 static void init() {
     // 讀取儲存的設定（優化 persist_exists 檢查）
     int stored_color = persist_read_int(KEY_MINUTE_COLOR);
