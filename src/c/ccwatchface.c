@@ -206,6 +206,18 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
 
 // ==================== 動畫 & 圖層管理 ====================
 
+// 安全取消動畫（避免競態條件）
+static void cancel_animation(DisplayLayer *display_layer) {
+    if (!display_layer) return;
+
+    if (display_layer->animation) {
+        PropertyAnimation *prop_anim = display_layer->animation;
+        display_layer->animation = NULL;  // 先清空，避免 callback 重複處理
+        animation_unschedule((Animation *)prop_anim);
+        property_animation_destroy(prop_anim);
+    }
+}
+
 // 輔助函式：載入圖片並套用主題（減少重複程式碼）
 static void load_layer_image(DisplayLayer *dl, uint32_t resource_id) {
     if (!dl) return;
@@ -272,18 +284,6 @@ static void fade_out_stopped_handler(Animation *animation, bool finished, void *
     animation_set_curve((Animation *)dl->animation, AnimationCurveEaseOut);
     animation_set_handlers((Animation *)dl->animation, (AnimationHandlers){.stopped = fade_in_stopped_handler}, dl);
     animation_schedule((Animation *)dl->animation);
-}
-
-// 安全取消動畫（避免競態條件）
-static void cancel_animation(DisplayLayer *display_layer) {
-    if (!display_layer) return;
-    
-    if (display_layer->animation) {
-        PropertyAnimation *prop_anim = display_layer->animation;
-        display_layer->animation = NULL;  // 先清空，避免 callback 重複處理
-        animation_unschedule((Animation *)prop_anim);
-        property_animation_destroy(prop_anim);
-    }
 }
 
 // 新增：無動畫的 bitmap 更新函式
