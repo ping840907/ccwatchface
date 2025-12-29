@@ -211,7 +211,10 @@ static void theme_apply_to_bitmap(const ThemeConfig *theme, GBitmap *bitmap, Lay
     if (!bitmap) return;
 
     GColor *palette = gbitmap_get_palette(bitmap);
-    if (!palette) return;
+    if (!palette) {
+        // 安全檢查：Aplite 上的 1-bit 圖可能無調色盤，避免崩潰
+        return;
+    }
 
 #if defined(PBL_COLOR)
     GColor accent_color = (type == LAYER_TYPE_HOUR) ? theme->hour_accent :
@@ -319,21 +322,91 @@ static void display_layer_deinit(DisplayLayer *dl) {
         bitmap_layer_destroy(dl->layer);
         dl->layer = NULL;
     }
+
+    dl->current_resource_id = RESOURCE_ID_NONE;
+    dl->anim_state = ANIM_STATE_IDLE;
+}
+
+// ==================== 圖層遍歷系統 ====================
+
+typedef void (*LayerIteratorCallback)(DisplayLayer *dl, void *context);
+
+static void iterate_all_layers(LayerIteratorCallback callback, void *context) {
+    if (!callback) return;
+
+    DisplayLayer *all_layers[] = {
+        &s_app.hour_layers[0], &s_app.hour_layers[1],
+        &s_app.minute_layers[0], &s_app.minute_layers[1],
+        &s_app.month_layers[0], &s_app.month_layers[1],
+        &s_app.day_layers[0], &s_app.day_layers[1],
+        &s_app.week_layer, &s_app.yue_layer, &s_app.ri_layer, &s_app.zhou_layer
+    };
+
+    for (size_t i = 0; i < ARRAY_LENGTH(all_layers); i++) {
+        if (all_layers[i]) {
+            callback(all_layers[i], context);
+        }
+    }
+}
+
+static void iterate_animated_layers(LayerIteratorCallback callback, void *context) {
+    if (!callback) return;
+
+    DisplayLayer *animated_layers[] = {
+        &s_app.hour_layers[0], &s_app.hour_layers[1],
+        &s_app.minute_layers[0], &s_app.minute_layers[1],
+        &s_app.month_layers[0], &s_app.month_layers[1],
+        &s_app.day_layers[0], &s_app.day_layers[1],
+        &s_app.week_layer
+    };
+
+    for (size_t i = 0; i < ARRAY_LENGTH(animated_layers); i++) {
+        if (animated_layers[i]) {
+            callback(animated_layers[i], context);
+        }
+    }
+}
+
+// ==================== 遍歷回調函數 (Callbacks) ====================
+
+// 用於 teardown
+static void teardown_layer_cb(DisplayLayer *dl, void *context) {
+    display_layer_deinit(dl);
+}
+
+// 用於主題更新
+static void refresh_theme_cb(DisplayLayer *dl, void *context) {
+    if (dl->bitmap) {
+        theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
+        if (dl->layer) {
+            layer_mark_dirty(bitmap_layer_get_layer(dl->layer));
+        }
+    }
+}
+
+// 用於動畫開關設定
+static void set_anim_pos_cb(DisplayLayer *dl, void *context) {
+    display_layer_set_position(dl, s_app.animation_enabled);
 }
 
 // ==================== 動畫系統 ====================
 
 static void anim_fade_in_stopped(Animation *anim, bool finished, void *context) {
     DisplayLayer *dl = (DisplayLayer *)context;
-    if (!dl) return;
+    if (!dl || !dl->layer) return;
 
     display_layer_cleanup_animation(dl);
 }
 
 static void anim_fade_out_stopped(Animation *anim, bool finished, void *context) {
     DisplayLayer *dl = (DisplayLayer *)context;
-    if (!dl || !finished) {
+    if (!dl || !dl->layer) {
         if (dl) display_layer_cleanup_animation(dl);
+        return;
+    }
+
+    if (!finished) {
+        display_layer_cleanup_animation(dl);
         return;
     }
 
@@ -355,7 +428,7 @@ static void anim_fade_out_stopped(Animation *anim, bool finished, void *context)
     animation_set_duration((Animation *)dl->animation, ANIMATION_DURATION_MS / 2);
     animation_set_curve((Animation *)dl->animation, AnimationCurveEaseOut);
     animation_set_handlers((Animation *)dl->animation,
-                          (AnimationHandlers){.stopped = anim_fade_in_stopped}, dl);
+                           (AnimationHandlers){.stopped = anim_fade_in_stopped}, dl);
     animation_schedule((Animation *)dl->animation);
 }
 
@@ -426,15 +499,15 @@ static void update_time_display(struct tm *tick_time) {
 
     int hour = tick_time->tm_hour;
     if (!clock_is_24h_style()) {
+        hour = hour % 12;
         if (hour == 0) hour = 12;
-        else if (hour > 12) hour -= 12;
     }
 
     uint32_t hour_tens = RESOURCE_ID_NONE;
     uint32_t hour_ones = (hour == 0) ? RESOURCE_ID_IMG_U0 :
-                         TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
+                          TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
 
-    if (hour > 10) {
+    if (hour > 10 && hour / 10 < (int)ARRAY_LENGTH(TIME_UPPERCASE_TENS_RESOURCES)) {
         hour_tens = TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
     }
 
@@ -479,11 +552,18 @@ static void update_date_display(struct tm *tick_time) {
     int d1 = day / 10;
     int d2 = day % 10;
     uint32_t day_tens = RESOURCE_ID_NONE;
-    uint32_t day_ones = DATE_LOWERCASE_ONES_RESOURCES[d2];
+    uint32_t day_ones = RESOURCE_ID_NONE;
+
+    if (d2 < (int)ARRAY_LENGTH(DATE_LOWERCASE_ONES_RESOURCES)) {
+        day_ones = DATE_LOWERCASE_ONES_RESOURCES[d2];
+    }
 
     if (day > 10) {
-        day_tens = (d2 == 0) ? DATE_LOWERCASE_ONES_RESOURCES[d1] :
-                   DATE_LOWERCASE_TENS_RESOURCES[d1];
+        if (d2 == 0 && d1 < (int)ARRAY_LENGTH(DATE_LOWERCASE_ONES_RESOURCES)) {
+            day_tens = DATE_LOWERCASE_ONES_RESOURCES[d1];
+        } else if (d1 < (int)ARRAY_LENGTH(DATE_LOWERCASE_TENS_RESOURCES)) {
+            day_tens = DATE_LOWERCASE_TENS_RESOURCES[d1];
+        }
     }
 
     uint32_t week_res = (week == 0) ? RESOURCE_ID_IMG_RI :
@@ -506,6 +586,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 // ==================== UI 構建 ====================
 
 static void setup_all_layers(Layer *parent) {
+    // 這裡保留陣列定義是合理的，因為每個圖層有不同的 frame 和 type
     DisplayLayer *layers[] = {
         &s_app.hour_layers[0], &s_app.hour_layers[1],
         &s_app.minute_layers[0], &s_app.minute_layers[1],
@@ -554,37 +635,13 @@ static void setup_all_layers(Layer *parent) {
 }
 
 static void teardown_all_layers(void) {
-    DisplayLayer *layers[] = {
-        &s_app.hour_layers[0], &s_app.hour_layers[1],
-        &s_app.minute_layers[0], &s_app.minute_layers[1],
-        &s_app.month_layers[0], &s_app.month_layers[1],
-        &s_app.day_layers[0], &s_app.day_layers[1],
-        &s_app.week_layer, &s_app.yue_layer, &s_app.ri_layer, &s_app.zhou_layer
-    };
-    
-    for (size_t i = 0; i < ARRAY_LENGTH(layers); i++) {
-        display_layer_deinit(layers[i]);
-    }
+    // 使用 Iterator + Callback，簡潔且不重複
+    iterate_all_layers(teardown_layer_cb, NULL);
 }
 
 static void refresh_all_layer_themes(void) {
-    DisplayLayer *layers[] = {
-        &s_app.hour_layers[0], &s_app.hour_layers[1],
-        &s_app.minute_layers[0], &s_app.minute_layers[1],
-        &s_app.month_layers[0], &s_app.month_layers[1],
-        &s_app.day_layers[0], &s_app.day_layers[1],
-        &s_app.week_layer, &s_app.yue_layer, &s_app.ri_layer, &s_app.zhou_layer
-    };
-    
-    for (size_t i = 0; i < ARRAY_LENGTH(layers); i++) {
-        DisplayLayer *dl = layers[i];
-        if (dl->bitmap) {
-            theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
-            if (dl->layer) {
-                layer_mark_dirty(bitmap_layer_get_layer(dl->layer));
-            }
-        }
-    }
+    // 使用 Iterator + Callback
+    iterate_all_layers(refresh_theme_cb, NULL);
 }
 
 static void apply_theme_to_window(void) {
@@ -675,17 +732,9 @@ static void handle_settings_update(DictionaryIterator *iter) {
         s_app.animation_enabled = anim->value->int32 == 1;
         persist_write_bool(KEY_ANIMATION_ENABLED, s_app.animation_enabled);
 
-        DisplayLayer *layers[] = {
-            &s_app.hour_layers[0], &s_app.hour_layers[1],
-            &s_app.minute_layers[0], &s_app.minute_layers[1],
-            &s_app.month_layers[0], &s_app.month_layers[1],
-            &s_app.day_layers[0], &s_app.day_layers[1],
-            &s_app.week_layer
-        };
-
-        for (size_t i = 0; i < ARRAY_LENGTH(layers); i++) {
-            display_layer_set_position(layers[i], s_app.animation_enabled);
-        }
+        // 使用 Iterator + Callback，更新動畫位置
+        // 僅針對會動的圖層 (exclude static resources like yue/ri/zhou)
+        iterate_animated_layers(set_anim_pos_cb, NULL);
     }
 }
 
