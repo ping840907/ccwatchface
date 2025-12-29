@@ -165,9 +165,8 @@ static void theme_init_defaults(ThemeConfig *theme) {
 #if defined(PBL_COLOR)
     theme->background = GColorBlack;
     theme->text = GColorWhite;
-    theme->hour_accent = GColorFromHEX(0xFFAA00);
-    theme->minute_accent = GColorFromHEX(0xFFAA00);
-    theme->accent_enabled = true;
+    theme->hour_accent = GColorChromeYellow;
+    theme->minute_accent = GColorChromeYellow;
 #else
     theme->background = GColorBlack;
     theme->text = GColorWhite;
