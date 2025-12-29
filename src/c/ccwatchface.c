@@ -206,6 +206,30 @@ static void apply_theme_to_layer(DisplayLayer *display_layer, GBitmap *bitmap) {
 
 // ==================== 動畫 & 圖層管理 ====================
 
+// 輔助函式：載入圖片並套用主題（減少重複程式碼）
+static void load_layer_image(DisplayLayer *dl, uint32_t resource_id) {
+    if (!dl) return;
+
+    if (dl->bitmap) {
+        gbitmap_destroy(dl->bitmap);
+        dl->bitmap = NULL;
+    }
+
+    if (resource_id != 0) {
+        dl->bitmap = gbitmap_create_with_resource(resource_id);
+        if (!dl->bitmap) {
+            APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to load resource: %lu", resource_id);
+        } else {
+            apply_theme_to_layer(dl, dl->bitmap);
+        }
+    }
+
+    if (dl->layer) {
+        bitmap_layer_set_bitmap(dl->layer, dl->bitmap);
+    }
+    dl->current_resource_id = resource_id;
+}
+
 static void fade_in_stopped_handler(Animation *animation, bool finished, void *context) {
     DisplayLayer *dl = (DisplayLayer *)context;
     if (!dl) return;
@@ -232,22 +256,7 @@ static void fade_out_stopped_handler(Animation *animation, bool finished, void *
     Layer *l = bitmap_layer_get_layer(dl->layer);
     if (!l) return;
     
-    if (dl->bitmap) {
-        gbitmap_destroy(dl->bitmap);
-        dl->bitmap = NULL;
-    }
-    
-    uint32_t new_res_id = dl->current_resource_id;
-    if (new_res_id != 0) {
-        dl->bitmap = gbitmap_create_with_resource(new_res_id);
-        if (!dl->bitmap) {
-            APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to create bitmap for resource: %lu", new_res_id);
-            return;
-        }
-    }
-    
-    apply_theme_to_layer(dl, dl->bitmap);
-    bitmap_layer_set_bitmap(dl->layer, dl->bitmap);
+    load_layer_image(dl, dl->current_resource_id);
     
     GRect current_frame = layer_get_frame(l);
     GRect target_frame = current_frame;
@@ -285,22 +294,7 @@ static void set_display_layer_bitmap_static(DisplayLayer *display_layer, uint32_
     cancel_animation(display_layer);
     layer_set_frame(bitmap_layer_get_layer(display_layer->layer), display_layer->initial_bounds);
 
-    if (display_layer->bitmap) {
-        gbitmap_destroy(display_layer->bitmap);
-        display_layer->bitmap = NULL;
-    }
-
-    if (resource_id != 0) {
-        display_layer->bitmap = gbitmap_create_with_resource(resource_id);
-        if (!display_layer->bitmap) {
-            APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to load static resource: %lu", resource_id);
-            return;
-        }
-    }
-
-    apply_theme_to_layer(display_layer, display_layer->bitmap);
-    bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
-    display_layer->current_resource_id = resource_id;
+    load_layer_image(display_layer, resource_id);
 }
 
 static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint32_t resource_id) {
@@ -313,22 +307,7 @@ static void set_display_layer_bitmap_animated(DisplayLayer *display_layer, uint3
     GRect current_frame = layer_get_frame(layer);
     
     if (display_layer->current_resource_id == 0) { // First time setup
-        if (display_layer->bitmap) {
-            gbitmap_destroy(display_layer->bitmap);
-            display_layer->bitmap = NULL;
-        }
-        
-        if (resource_id != 0) {
-            display_layer->bitmap = gbitmap_create_with_resource(resource_id);
-            if (!display_layer->bitmap) {
-                APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to load resource: %lu", resource_id);
-                return;
-            }
-        }
-        
-        apply_theme_to_layer(display_layer, display_layer->bitmap);
-        bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
-        display_layer->current_resource_id = resource_id;
+        load_layer_image(display_layer, resource_id);
         
         GRect target_frame = current_frame;
         target_frame.origin.y -= FADE_OUT_DISTANCE;
@@ -363,27 +342,6 @@ static void update_display_layer(DisplayLayer *display_layer, uint32_t resource_
     } else {
         set_display_layer_bitmap_static(display_layer, resource_id);
     }
-}
-
-static void set_display_layer_bitmap(DisplayLayer *display_layer, uint32_t resource_id) {
-    if (!display_layer) return;
-    
-    if (display_layer->bitmap) {
-        gbitmap_destroy(display_layer->bitmap);
-        display_layer->bitmap = NULL;
-    }
-    
-    if (resource_id != 0) {
-        display_layer->bitmap = gbitmap_create_with_resource(resource_id);
-        if (!display_layer->bitmap) {
-            APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to load fixed resource: %lu", resource_id);
-            return;
-        }
-    }
-    
-    apply_theme_to_layer(display_layer, display_layer->bitmap);
-    bitmap_layer_set_bitmap(display_layer->layer, display_layer->bitmap);
-    display_layer->current_resource_id = resource_id;
 }
 
 // ==================== 時間 & 日期更新 ====================
@@ -567,7 +525,7 @@ static void main_window_load(Window *window) {
         
         // 如果是固定圖層，立即載入 bitmap（記憶體效率優化）
         if (config->fixed_resource_id != 0) {
-            set_display_layer_bitmap(config->display_layer, config->fixed_resource_id);
+            load_layer_image(config->display_layer, config->fixed_resource_id);
         }
     }
 
