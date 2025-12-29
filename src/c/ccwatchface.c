@@ -418,11 +418,8 @@ static void update_date(struct tm *tick_time) {
     int week = tick_time->tm_wday;
 
     // 處理月份
-    uint32_t month_tens_res_id = 0;
+    uint32_t month_tens_res_id = (month > 10) ? RESOURCE_ID_IMG_SU10 : 0;
     uint32_t month_ones_res_id = DATE_UPPERCASE_ONES_RESOURCES[month % 10];
-    if (month > 10) {
-        month_tens_res_id = RESOURCE_ID_IMG_SU10;
-    }
 
     // 處理日期
     int d1 = day / 10;
