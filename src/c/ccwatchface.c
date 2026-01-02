@@ -101,8 +101,6 @@ typedef struct {
     // B&W Platform Settings
     bool is_dark;
     bool bw_hour_accent;
-
-    // bool bw_minute_accent; // Removed
 } ThemeConfig;
 
 // 應用狀態
@@ -404,6 +402,11 @@ static void anim_fade_in_stopped(Animation *anim, bool finished, void *context) 
     DisplayLayer *dl = (DisplayLayer *)context;
     if (!dl || !dl->layer) return;
 
+    if (!finished) {
+        // If interrupted, ensure we snap to the final correct position
+        display_layer_set_position(dl, false);
+    }
+
     display_layer_cleanup_animation(dl);
 }
 
@@ -415,6 +418,9 @@ static void anim_fade_out_stopped(Animation *anim, bool finished, void *context)
     }
 
     if (!finished) {
+        // If interrupted, force load the intended resource and snap to base position
+        display_layer_load_resource(dl, dl->current_resource_id);
+        display_layer_set_position(dl, false);
         display_layer_cleanup_animation(dl);
         return;
     }
