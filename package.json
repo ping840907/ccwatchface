@@ -29,10 +29,13 @@
       "watchface": true
     },
     "messageKeys": {
-      "KEY_MINUTE_COLOR": 0,
-      "KEY_THEME_IS_DARK": 1,
-      "KEY_BW_ACCENT_OFF": 2,
-      "KEY_ANIMATION_ENABLED": 3
+      "KEY_HOUR_COLOR": 0,
+      "KEY_MINUTE_COLOR": 1,
+      "KEY_THEME_IS_DARK": 2,
+      "KEY_ANIMATION_ENABLED": 3,
+      "KEY_BACKGROUND_COLOR": 4,
+      "KEY_TEXT_COLOR": 5,
+      "KEY_BW_HOUR_ACCENT": 6
     },
     "capabilities": [
       "configurable"
