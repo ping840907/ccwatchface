@@ -53,7 +53,7 @@
       {
         "type": "toggle",
         "messageKey": "KEY_THEME_IS_DARK",
-        "label": "Dark Theme",
+        "label": "Dark/Light Mode",
         "defaultValue": true,
         "capabilities": [
           "NOT_COLOR"
@@ -61,9 +61,9 @@
       },
       {
         "type": "toggle",
-        "messageKey": "KEY_BW_ACCENT_OFF",
-        "label": "Disable Accent on B&W",
-        "defaultValue": false,
+        "messageKey": "KEY_BW_HOUR_ACCENT",
+        "label": "Hour Accent",
+        "defaultValue": true,
         "capabilities": [
           "NOT_COLOR"
         ]
