@@ -55,13 +55,14 @@
 
 // 設定鍵值
 typedef enum {
-    KEY_MINUTE_COLOR = 0,
-    KEY_THEME_IS_DARK = 1,
-    KEY_BW_ACCENT_OFF = 2,
+    KEY_MINUTE_COLOR = 1,
+    KEY_THEME_IS_DARK = 2,
+    KEY_HOUR_COLOR = 0,
     KEY_ANIMATION_ENABLED = 3,
     KEY_BACKGROUND_COLOR = 4,
     KEY_TEXT_COLOR = 5,
-    KEY_HOUR_COLOR = 6,
+    KEY_BW_HOUR_ACCENT = 6,
+
 } SettingKey;
 
 // 圖層類型（用於主題應用）
@@ -97,7 +98,11 @@ typedef struct {
     GColor text;
     GColor hour_accent;
     GColor minute_accent;
-    bool accent_enabled;
+    // B&W Platform Settings
+    bool is_dark;
+    bool bw_hour_accent;
+
+    // bool bw_minute_accent; // Removed
 } ThemeConfig;
 
 // 應用狀態
@@ -161,6 +166,21 @@ static const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 
 // ==================== 主題系統 ====================
 
+static void theme_resolve_colors(ThemeConfig *theme) {
+#if defined(PBL_COLOR)
+    // On Color platforms, colors are set directly via AppMessage
+#else
+    theme->background = theme->is_dark ? GColorBlack : GColorWhite;
+    theme->text = theme->is_dark ? GColorWhite : GColorBlack;
+    
+    // Hour Accent: Follows Background (Invisible/Masked) or Text (Visible)
+    theme->hour_accent = theme->bw_hour_accent ? theme->background : theme->text;
+    
+    // Minute Accent: Always Text Color (Disabled) on B&W
+    theme->minute_accent = theme->text;
+#endif
+}
+
 static void theme_init_defaults(ThemeConfig *theme) {
 #if defined(PBL_COLOR)
     theme->background = GColorBlack;
@@ -168,11 +188,9 @@ static void theme_init_defaults(ThemeConfig *theme) {
     theme->hour_accent = GColorChromeYellow;
     theme->minute_accent = GColorChromeYellow;
 #else
-    theme->background = GColorBlack;
-    theme->text = GColorWhite;
-    theme->hour_accent = GColorWhite;
-    theme->minute_accent = GColorBlack;
-    theme->accent_enabled = true;
+    theme->is_dark = true;
+    theme->bw_hour_accent = true;
+    theme_resolve_colors(theme);
 #endif
 }
 
@@ -194,15 +212,12 @@ static void theme_load_from_storage(ThemeConfig *theme) {
     }
 #else
     if (persist_exists(KEY_THEME_IS_DARK)) {
-        bool is_dark = persist_read_bool(KEY_THEME_IS_DARK);
-        theme->background = is_dark ? GColorBlack : GColorWhite;
-        theme->text = is_dark ? GColorWhite : GColorBlack;
-        theme->hour_accent = theme->text;
-        theme->minute_accent = is_dark ? GColorBlack : GColorWhite;
+        theme->is_dark = persist_read_bool(KEY_THEME_IS_DARK);
     }
-    if (persist_exists(KEY_BW_ACCENT_OFF)) {
-        theme->accent_enabled = !persist_read_bool(KEY_BW_ACCENT_OFF);
+    if (persist_exists(KEY_BW_HOUR_ACCENT)) {
+        theme->bw_hour_accent = persist_read_bool(KEY_BW_HOUR_ACCENT);
     }
+    theme_resolve_colors(theme);
 #endif
 }
 
@@ -215,30 +230,25 @@ static void theme_apply_to_bitmap(const ThemeConfig *theme, GBitmap *bitmap, Lay
         return;
     }
 
-#if defined(PBL_COLOR)
     GColor accent_color = (type == LAYER_TYPE_HOUR) ? theme->hour_accent :
                           (type == LAYER_TYPE_MINUTE_ACCENT) ? theme->minute_accent :
                           theme->text;
 
     for (int i = 0; i < PALETTE_SIZE; i++) {
+#if defined(PBL_COLOR)
         if (gcolor_equal(palette[i], GColorRed)) {
             palette[i] = accent_color;
         } else if (gcolor_equal(palette[i], GColorBlack)) {
             palette[i] = (type == LAYER_TYPE_MINUTE_ACCENT) ? accent_color : theme->text;
         }
-    }
 #else
-    GColor main_color = theme->text;
-    GColor accent_color = theme->accent_enabled ? theme->minute_accent : main_color;
-
-    for (int i = 0; i < PALETTE_SIZE; i++) {
         if (gcolor_equal(palette[i], GColorBlack)) {
-            palette[i] = main_color;
+            palette[i] = theme->text;
         } else if (gcolor_equal(palette[i], GColorWhite)) {
             palette[i] = accent_color;
         }
-    }
 #endif
+    }
 }
 
 // ==================== 圖層管理系統 ====================
@@ -689,22 +699,24 @@ static void handle_settings_update(DictionaryIterator *iter) {
         theme_changed = true;
     }
 #else
+
     Tuple *dark = dict_find(iter, KEY_THEME_IS_DARK);
     if (dark) {
-        bool is_dark = dark->value->int32 == 1;
-        s_app.theme.background = is_dark ? GColorBlack : GColorWhite;
-        s_app.theme.text = is_dark ? GColorWhite : GColorBlack;
-        s_app.theme.hour_accent = s_app.theme.text;
-        s_app.theme.minute_accent = is_dark ? GColorBlack : GColorWhite;
-        persist_write_bool(KEY_THEME_IS_DARK, is_dark);
+        s_app.theme.is_dark = dark->value->int32 == 1;
+        persist_write_bool(KEY_THEME_IS_DARK, s_app.theme.is_dark);
         theme_changed = true;
     }
 
-    Tuple *accent_off = dict_find(iter, KEY_BW_ACCENT_OFF);
-    if (accent_off) {
-        s_app.theme.accent_enabled = accent_off->value->int32 != 1;
-        persist_write_bool(KEY_BW_ACCENT_OFF, accent_off->value->int32 == 1);
+    Tuple *hour_bg = dict_find(iter, KEY_BW_HOUR_ACCENT);
+    if (hour_bg) {
+        s_app.theme.bw_hour_accent = hour_bg->value->int32 == 1;
+        persist_write_bool(KEY_BW_HOUR_ACCENT, s_app.theme.bw_hour_accent);
         theme_changed = true;
+    }
+    
+    // Resolve colors based on new settings
+    if (theme_changed) {
+        theme_resolve_colors(&s_app.theme);
     }
 #endif
 
