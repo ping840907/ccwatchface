@@ -53,7 +53,7 @@
       {
         "type": "toggle",
         "messageKey": "KEY_THEME_IS_DARK",
-        "label": "Dark/Light Mode",
+        "label": "Dark Mode",
         "defaultValue": true,
         "capabilities": [
           "NOT_COLOR"
