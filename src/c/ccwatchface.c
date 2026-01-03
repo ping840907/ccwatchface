@@ -690,6 +690,7 @@ static void handle_settings_update(DictionaryIterator *iter) {
     
     bool theme_changed = false;
 
+    // 1. Read Settings
 #if defined(PBL_COLOR)
     Tuple *bg = dict_find(iter, KEY_BACKGROUND_COLOR);
     if (bg) {
@@ -705,7 +706,6 @@ static void handle_settings_update(DictionaryIterator *iter) {
         theme_changed = true;
     }
 #else
-
     Tuple *dark = dict_find(iter, KEY_THEME_IS_DARK);
     if (dark) {
         s_app.theme.is_dark = dark->value->int32 == 1;
@@ -718,11 +718,6 @@ static void handle_settings_update(DictionaryIterator *iter) {
         s_app.theme.bw_hour_accent = hour_bg->value->int32 == 1;
         persist_write_bool(KEY_BW_HOUR_ACCENT, s_app.theme.bw_hour_accent);
         theme_changed = true;
-    }
-    
-    // Resolve colors based on new settings
-    if (theme_changed) {
-        theme_resolve_colors(&s_app.theme);
     }
 #endif
 
@@ -740,10 +735,16 @@ static void handle_settings_update(DictionaryIterator *iter) {
         theme_changed = true;
     }
 
+    // 2. Resolve Colors (Fix integrity)
+    // Ensure B&W constraints override any raw color inputs
+    theme_resolve_colors(&s_app.theme);
+
+    // 3. Apply Theme
     if (theme_changed) {
         apply_theme_to_window();
     }
 
+    // 4. Other Settings
     Tuple *anim = dict_find(iter, KEY_ANIMATION_ENABLED);
     if (anim) {
         s_app.animation_enabled = anim->value->int32 == 1;
