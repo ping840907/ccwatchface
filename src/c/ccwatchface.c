@@ -55,9 +55,9 @@
 
 // 設定鍵值
 typedef enum {
+    KEY_HOUR_COLOR = 0,
     KEY_MINUTE_COLOR = 1,
     KEY_THEME_IS_DARK = 2,
-    KEY_HOUR_COLOR = 0,
     KEY_ANIMATION_ENABLED = 3,
     KEY_BACKGROUND_COLOR = 4,
     KEY_TEXT_COLOR = 5,
