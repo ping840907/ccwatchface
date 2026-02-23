@@ -6,13 +6,6 @@
 #define ANIMATION_DURATION_MS 300
 #define ANIMATION_OFFSET_Y 5
 
-// 調色盤大小
-#if defined(PBL_COLOR)
-    #define PALETTE_SIZE 8
-#else
-    #define PALETTE_SIZE 4
-#endif
-
 // 特殊資源 ID 標記
 #define RESOURCE_ID_NONE 0
 
@@ -219,20 +212,33 @@ static void theme_load_from_storage(ThemeConfig *theme) {
 #endif
 }
 
+static int get_palette_size(GBitmap *bitmap) {
+    switch (gbitmap_get_format(bitmap)) {
+        case GBitmapFormat1Bit:
+        case GBitmapFormat1BitPalette: return 2;
+        case GBitmapFormat2BitPalette:  return 4;
+        case GBitmapFormat4BitPalette:  return 16;
+        default:                        return 0;  // GBitmapFormat8Bit 等無調色盤格式
+    }
+}
+
 static void theme_apply_to_bitmap(const ThemeConfig *theme, GBitmap *bitmap, LayerType type) {
     if (!bitmap) return;
 
     GColor *palette = gbitmap_get_palette(bitmap);
     if (!palette) {
-        // 安全檢查：Aplite 上的 1-bit 圖可能無調色盤，避免崩潰
+        // 安全檢查：無調色盤的格式（如 8-bit）直接跳過
         return;
     }
+
+    int palette_size = get_palette_size(bitmap);
+    if (palette_size == 0) return;
 
     GColor accent_color = (type == LAYER_TYPE_HOUR) ? theme->hour_accent :
                           (type == LAYER_TYPE_MINUTE_ACCENT) ? theme->minute_accent :
                           theme->text;
 
-    for (int i = 0; i < PALETTE_SIZE; i++) {
+    for (int i = 0; i < palette_size; i++) {
 #if defined(PBL_COLOR)
         if (gcolor_equal(palette[i], GColorRed)) {
             palette[i] = accent_color;
