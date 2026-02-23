@@ -314,7 +314,7 @@ static void display_layer_set_position(DisplayLayer *dl, bool offset_for_animati
     if (!dl || !dl->layer) return;
 
     GRect frame = dl->base_frame;
-    if (offset_for_animation && s_app.animation_enabled) {
+    if (offset_for_animation) {
         frame.origin.y += ANIMATION_OFFSET_Y;
     }
 
@@ -387,8 +387,10 @@ static void teardown_layer_cb(DisplayLayer *dl, void *context) {
     display_layer_deinit(dl);
 }
 
-// 用於主題更新
+// 用於主題更新（靜態圖層內容固定，無需重新套用）
 static void refresh_theme_cb(DisplayLayer *dl, void *context) {
+    if (dl->type == LAYER_TYPE_STATIC) return;
+
     if (dl->bitmap) {
         theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
         if (dl->layer) {
@@ -397,9 +399,9 @@ static void refresh_theme_cb(DisplayLayer *dl, void *context) {
     }
 }
 
-// 用於動畫開關設定
+// 用於動畫開關設定（直接傳入全域狀態，由呼叫方決定是否偏移）
 static void set_anim_pos_cb(DisplayLayer *dl, void *context) {
-    display_layer_set_position(dl, s_app.animation_enabled);
+    display_layer_set_position(dl, s_app.animation_enabled);  // 呼叫方決定偏移與否
 }
 
 // ==================== 動畫系統 ====================
@@ -458,26 +460,17 @@ static void display_layer_update_animated(DisplayLayer *dl, uint32_t resource_id
 
     display_layer_cleanup_animation(dl);
 
-    Layer *layer = bitmap_layer_get_layer(dl->layer);
-    GRect from = layer_get_frame(layer);
-
     if (dl->current_resource_id == RESOURCE_ID_NONE) {
+        // 圖層尚無內容，動畫期間完全不可見，直接載入並定位即可
         display_layer_load_resource(dl, resource_id);
         dl->current_resource_id = resource_id;
-        
-        GRect to = dl->base_frame;
-        dl->animation = property_animation_create_layer_frame(layer, &from, &to);
-        
-        if (dl->animation) {
-            dl->anim_state = ANIM_STATE_FADE_IN;
-            animation_set_duration((Animation *)dl->animation, ANIMATION_DURATION_MS / 2);
-            animation_set_handlers((Animation *)dl->animation,
-                                  (AnimationHandlers){.stopped = anim_fade_in_stopped}, dl);
-            animation_schedule((Animation *)dl->animation);
-        }
+        display_layer_set_position(dl, false);
         return;
     }
-    
+
+    // 以下才需要現有圖層的位置資訊
+    Layer *layer = bitmap_layer_get_layer(dl->layer);
+    GRect from = layer_get_frame(layer);
     dl->current_resource_id = resource_id;
 
     GRect to = from;
@@ -729,15 +722,20 @@ static void handle_settings_update(DictionaryIterator *iter) {
 
     Tuple *minute_color = dict_find(iter, KEY_MINUTE_COLOR);
     if (minute_color) {
+#if defined(PBL_COLOR)
+        // B&W 平台：theme_resolve_colors() 會強制覆蓋這兩個值，無需寫入 flash
         s_app.theme.minute_accent = GColorFromHEX(minute_color->value->int32);
         persist_write_int(KEY_MINUTE_COLOR, minute_color->value->int32);
+#endif
         theme_changed = true;
     }
 
     Tuple *hour_color = dict_find(iter, KEY_HOUR_COLOR);
     if (hour_color) {
+#if defined(PBL_COLOR)
         s_app.theme.hour_accent = GColorFromHEX(hour_color->value->int32);
         persist_write_int(KEY_HOUR_COLOR, hour_color->value->int32);
+#endif
         theme_changed = true;
     }
 
