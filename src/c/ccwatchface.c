@@ -387,10 +387,10 @@ static void teardown_layer_cb(DisplayLayer *dl, void *context) {
     display_layer_deinit(dl);
 }
 
-// 用於主題更新（靜態圖層內容固定，無需重新套用）
+// 用於主題更新
+// 注意：靜態圖層（月、日、週）雖然內容不變，但顏色仍需隨主題更新。
+// 此函數只修改調色盤與標記重繪，不涉及位置，不會造成圖層位移。
 static void refresh_theme_cb(DisplayLayer *dl, void *context) {
-    if (dl->type == LAYER_TYPE_STATIC) return;
-
     if (dl->bitmap) {
         theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
         if (dl->layer) {
@@ -434,7 +434,10 @@ static void anim_fade_out_stopped(Animation *anim, bool finished, void *context)
     }
 
     Layer *layer = bitmap_layer_get_layer(dl->layer);
-    if (!layer) return;
+    if (!layer) {
+        display_layer_cleanup_animation(dl);
+        return;
+    }
 
     display_layer_load_resource(dl, dl->current_resource_id);
 
@@ -443,7 +446,9 @@ static void anim_fade_out_stopped(Animation *anim, bool finished, void *context)
 
     dl->animation = property_animation_create_layer_frame(layer, &from, &to);
     if (!dl->animation) {
-        APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to create fade-in animation");
+        APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to create fade-in animation, falling back to static update");
+        display_layer_set_position(dl, false);
+        display_layer_cleanup_animation(dl);
         return;
     }
 
@@ -484,6 +489,12 @@ static void display_layer_update_animated(DisplayLayer *dl, uint32_t resource_id
         animation_set_handlers((Animation *)dl->animation,
                               (AnimationHandlers){.stopped = anim_fade_out_stopped}, dl);
         animation_schedule((Animation *)dl->animation);
+    } else {
+        // Fallback：動畫建立失敗時直接靜態更新，
+        // 避免 current_resource_id 已更新但 bitmap 未載入導致圖層卡死
+        APP_LOG(APP_LOG_LEVEL_WARNING, "Failed to create fade-out animation, falling back to static update");
+        display_layer_load_resource(dl, resource_id);
+        display_layer_set_position(dl, false);
     }
 }
 
