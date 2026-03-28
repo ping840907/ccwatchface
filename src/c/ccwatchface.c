@@ -388,8 +388,6 @@ static void teardown_layer_cb(DisplayLayer *dl, void *context) {
 }
 
 // 用於主題更新
-// 注意：靜態圖層（月、日、週）雖然內容不變，但顏色仍需隨主題更新。
-// 此函數只修改調色盤與標記重繪，不涉及位置，不會造成圖層位移。
 static void refresh_theme_cb(DisplayLayer *dl, void *context) {
     if (dl->bitmap) {
         theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
@@ -401,7 +399,7 @@ static void refresh_theme_cb(DisplayLayer *dl, void *context) {
 
 // 用於動畫開關設定（直接傳入全域狀態，由呼叫方決定是否偏移）
 static void set_anim_pos_cb(DisplayLayer *dl, void *context) {
-    display_layer_set_position(dl, s_app.animation_enabled);  // 呼叫方決定偏移與否
+    display_layer_set_position(dl, s_app.animation_enabled);
 }
 
 // ==================== 動畫系統 ====================
@@ -466,14 +464,12 @@ static void display_layer_update_animated(DisplayLayer *dl, uint32_t resource_id
     display_layer_cleanup_animation(dl);
 
     if (dl->current_resource_id == RESOURCE_ID_NONE) {
-        // 圖層尚無內容，動畫期間完全不可見，直接載入並定位即可
         display_layer_load_resource(dl, resource_id);
         dl->current_resource_id = resource_id;
         display_layer_set_position(dl, false);
         return;
     }
 
-    // 以下才需要現有圖層的位置資訊
     Layer *layer = bitmap_layer_get_layer(dl->layer);
     GRect from = layer_get_frame(layer);
     dl->current_resource_id = resource_id;
@@ -490,8 +486,7 @@ static void display_layer_update_animated(DisplayLayer *dl, uint32_t resource_id
                               (AnimationHandlers){.stopped = anim_fade_out_stopped}, dl);
         animation_schedule((Animation *)dl->animation);
     } else {
-        // Fallback：動畫建立失敗時直接靜態更新，
-        // 避免 current_resource_id 已更新但 bitmap 未載入導致圖層卡死
+        // Fallback：動畫建立失敗時直接靜態更新
         APP_LOG(APP_LOG_LEVEL_WARNING, "Failed to create fade-out animation, falling back to static update");
         display_layer_load_resource(dl, resource_id);
         display_layer_set_position(dl, false);
@@ -611,7 +606,6 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 // ==================== UI 構建 ====================
 
 static void setup_all_layers(Layer *parent) {
-    // 這裡保留陣列定義是合理的，因為每個圖層有不同的 frame 和 type
     DisplayLayer *layers[] = {
         &s_app.hour_layers[0], &s_app.hour_layers[1],
         &s_app.minute_layers[0], &s_app.minute_layers[1],
@@ -660,12 +654,10 @@ static void setup_all_layers(Layer *parent) {
 }
 
 static void teardown_all_layers(void) {
-    // 使用 Iterator + Callback，簡潔且不重複
     iterate_all_layers(teardown_layer_cb, NULL);
 }
 
 static void refresh_all_layer_themes(void) {
-    // 使用 Iterator + Callback
     iterate_all_layers(refresh_theme_cb, NULL);
 }
 
@@ -734,7 +726,6 @@ static void handle_settings_update(DictionaryIterator *iter) {
     Tuple *minute_color = dict_find(iter, KEY_MINUTE_COLOR);
     if (minute_color) {
 #if defined(PBL_COLOR)
-        // B&W 平台：theme_resolve_colors() 會強制覆蓋這兩個值，無需寫入 flash
         s_app.theme.minute_accent = GColorFromHEX(minute_color->value->int32);
         persist_write_int(KEY_MINUTE_COLOR, minute_color->value->int32);
 #endif
@@ -751,7 +742,6 @@ static void handle_settings_update(DictionaryIterator *iter) {
     }
 
     // 2. Resolve Colors (Fix integrity)
-    // Ensure B&W constraints override any raw color inputs
     theme_resolve_colors(&s_app.theme);
 
     // 3. Apply Theme
@@ -764,9 +754,6 @@ static void handle_settings_update(DictionaryIterator *iter) {
     if (anim) {
         s_app.animation_enabled = anim->value->int32 == 1;
         persist_write_bool(KEY_ANIMATION_ENABLED, s_app.animation_enabled);
-
-        // 使用 Iterator + Callback，更新動畫位置
-        // 僅針對會動的圖層 (exclude static resources like yue/ri/zhou)
         iterate_animated_layers(set_anim_pos_cb, NULL);
     }
 }
