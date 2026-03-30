@@ -91,7 +91,7 @@ typedef struct {
     GColor text;
     GColor hour_accent;
     GColor minute_accent;
-    // B&W Platform Settings
+    // 黑白平台專用設定（彩色平台直接由 AppMessage 寫入，不使用這兩個欄位）
     bool is_dark;
     bool bw_hour_accent;
 } ThemeConfig;
@@ -117,6 +117,14 @@ typedef struct {
 static AppState s_app;
 
 // ==================== 資源映射表 ====================
+//
+// 每個陣列將數字索引對應至圖片資源 ID，供時間與日期圖層查表使用。
+// 命名規則：
+//   UPPERCASE（U）  = 大號中文數字圖片，用於顯示「時」
+//   LOWERCASE（L）  = 大號阿拉伯數字圖片，用於顯示「分」
+//   DATE_UPPERCASE（SU）/ DATE_LOWERCASE（SL）= 同上的縮小版，用於顯示「月日」
+//   TENS = 十位圖，ONES = 個位圖
+//   RESOURCE_ID_NONE = 該位置不顯示圖片（例如小時十位不足時）
 
 static const uint32_t TIME_UPPERCASE_TENS_RESOURCES[] = {
     RESOURCE_ID_NONE, RESOURCE_ID_IMG_U10, RESOURCE_ID_IMG_U2,
@@ -159,15 +167,16 @@ static const uint32_t DATE_LOWERCASE_ONES_RESOURCES[] = {
 
 static void theme_resolve_colors(ThemeConfig *theme) {
 #if defined(PBL_COLOR)
-    // On Color platforms, colors are set directly via AppMessage
+    // 彩色平台的顏色由 AppMessage 直接寫入，不需在此計算
 #else
     theme->background = theme->is_dark ? GColorBlack : GColorWhite;
     theme->text = theme->is_dark ? GColorWhite : GColorBlack;
     
-    // Hour Accent: Follows Background (Invisible/Masked) or Text (Visible)
+    // 小時強調色：設為背景色時圖片與背景融合（視覺上不可見），設為文字色時正常顯示。
+    // 此設計讓使用者可選擇黑白表盤是否突顯小時數字。
     theme->hour_accent = theme->bw_hour_accent ? theme->background : theme->text;
     
-    // Minute Accent: Always Text Color (Disabled) on B&W
+    // 黑白平台不支援獨立的分鐘強調色，統一沿用文字色
     theme->minute_accent = theme->text;
 #endif
 }
@@ -227,7 +236,7 @@ static void theme_apply_to_bitmap(const ThemeConfig *theme, GBitmap *bitmap, Lay
 
     GColor *palette = gbitmap_get_palette(bitmap);
     if (!palette) {
-        // 安全檢查：無調色盤的格式（如 8-bit）直接跳過
+        // 8-bit 等非調色盤格式無法直接修改顏色，跳過主題套用
         return;
     }
 
@@ -238,6 +247,9 @@ static void theme_apply_to_bitmap(const ThemeConfig *theme, GBitmap *bitmap, Lay
                           (type == LAYER_TYPE_MINUTE_ACCENT) ? theme->minute_accent :
                           theme->text;
 
+    // 圖片資源以固定色作為語意插槽，此處將其替換為當前主題配色：
+    //   彩色平台：Red → 強調色，Black → 文字色（或強調色，視圖層類型），White → 強調色
+    //   黑白平台：Black → 文字色（單色調色盤的唯一前景色）
     for (int i = 0; i < palette_size; i++) {
 #if defined(PBL_COLOR)
         if (gcolor_equal(palette[i], GColorRed)) {
@@ -272,6 +284,7 @@ static void display_layer_init(DisplayLayer *dl, Layer *parent, GRect frame, Lay
         return;
     }
 
+    // GCompOpSet：保留圖片的透明通道，確保多圖層疊加時背景透明正確顯示
     bitmap_layer_set_background_color(dl->layer, GColorClear);
     bitmap_layer_set_compositing_mode(dl->layer, GCompOpSet);
     layer_add_child(parent, bitmap_layer_get_layer(dl->layer));
@@ -382,12 +395,12 @@ static void iterate_animated_layers(LayerIteratorCallback callback, void *contex
 
 // ==================== 遍歷回調函數 (Callbacks) ====================
 
-// 用於 teardown
+// 釋放圖層的所有資源（動畫、點陣圖、圖層物件）
 static void teardown_layer_cb(DisplayLayer *dl, void *context) {
     display_layer_deinit(dl);
 }
 
-// 用於主題更新
+// 重新套用主題色至點陣圖調色盤，並標記圖層需重繪
 static void refresh_theme_cb(DisplayLayer *dl, void *context) {
     if (dl->bitmap) {
         theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
@@ -397,18 +410,24 @@ static void refresh_theme_cb(DisplayLayer *dl, void *context) {
     }
 }
 
-// 用於動畫開關設定（直接傳入全域狀態，由呼叫方決定是否偏移）
+// 依當前動畫設定調整圖層起始位置（啟用時下偏 ANIMATION_OFFSET_Y，關閉時歸位至基準位置）
 static void set_anim_pos_cb(DisplayLayer *dl, void *context) {
     display_layer_set_position(dl, s_app.animation_enabled);
 }
 
 // ==================== 動畫系統 ====================
+//
+// 換圖動畫採兩段式設計：
+//   第一段（fade-out）：圖層下滑離場
+//   第二段（fade-in） ：載入新圖後上滑入場，由 anim_fade_out_stopped 串接觸發
+// 兩段動畫各佔 ANIMATION_DURATION_MS 的一半，分別使用 EaseIn 與 EaseOut 曲線。
 
 static void anim_fade_in_stopped(Animation *anim, bool finished, void *context) {
     DisplayLayer *dl = (DisplayLayer *)context;
     if (!dl || !dl->layer) return;
 
     if (!finished) {
+        // 若入場動畫被中斷（如分鐘快速連切），強制歸位至基準位置，避免圖層殘留偏移
         display_layer_set_position(dl, false);
     }
 
@@ -423,7 +442,7 @@ static void anim_fade_out_stopped(Animation *anim, bool finished, void *context)
     }
 
     if (!finished) {
-        // If interrupted, force load the intended resource and snap to base position
+        // 若離場動畫被中斷，強制載入目標資源並歸位，避免顯示殘留的舊內容
         display_layer_load_resource(dl, dl->current_resource_id);
         display_layer_set_position(dl, false);
         display_layer_cleanup_animation(dl);
@@ -436,6 +455,7 @@ static void anim_fade_out_stopped(Animation *anim, bool finished, void *context)
         return;
     }
 
+    // 第二段：載入新資源後，從當前（已下滑）位置上滑回基準位置
     display_layer_load_resource(dl, dl->current_resource_id);
 
     GRect from = layer_get_frame(layer);
@@ -470,11 +490,11 @@ static void display_layer_update_animated(DisplayLayer *dl, uint32_t resource_id
         return;
     }
 
-    // 以下才需要現有圖層的位置資訊
     Layer *layer = bitmap_layer_get_layer(dl->layer);
     GRect from = layer_get_frame(layer);
     dl->current_resource_id = resource_id;
 
+    // 第一段：從當前位置下滑離場，結束後由 anim_fade_out_stopped 串接觸發入場動畫
     GRect to = from;
     to.origin.y += ANIMATION_OFFSET_Y;
     
@@ -487,7 +507,7 @@ static void display_layer_update_animated(DisplayLayer *dl, uint32_t resource_id
                               (AnimationHandlers){.stopped = anim_fade_out_stopped}, dl);
         animation_schedule((Animation *)dl->animation);
     } else {
-        // Fallback：動畫建立失敗時直接靜態更新，
+        // 動畫建立失敗時直接靜態更新，
         // 避免 current_resource_id 已更新但 bitmap 未載入導致圖層卡死
         APP_LOG(APP_LOG_LEVEL_WARNING, "Failed to create fade-out animation, falling back to static update");
         display_layer_load_resource(dl, resource_id);
@@ -540,6 +560,10 @@ static void update_time_display(struct tm *tick_time) {
     uint32_t minute_tens = RESOURCE_ID_NONE;
     uint32_t minute_ones = RESOURCE_ID_NONE;
 
+    // 中文時間慣用語的特殊對應：
+    //   :00 → 「點整」（如「三點整」），:30 → 「點半」（如「三點半」）
+    //   :10 → 使用 L1 + L0 組合，因為「一十分」在中文口語中通常念「十分」
+    // 其餘分鐘：個位為 0 時（如 :20）十位圖本身即含「十」字，個位圖留空
     if (minute == 0) {
         minute_tens = RESOURCE_ID_IMG_DIAN;
         minute_ones = RESOURCE_ID_IMG_ZHENG;
@@ -608,7 +632,6 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 // ==================== UI 構建 ====================
 
 static void setup_all_layers(Layer *parent) {
-    // 這裡保留陣列定義是合理的，因為每個圖層有不同的 frame 和 type
     DisplayLayer *layers[] = {
         &s_app.hour_layers[0], &s_app.hour_layers[1],
         &s_app.minute_layers[0], &s_app.minute_layers[1],
@@ -639,6 +662,8 @@ static void setup_all_layers(Layer *parent) {
         LAYER_TYPE_DATE, LAYER_TYPE_STATIC, LAYER_TYPE_STATIC, LAYER_TYPE_STATIC
     };
 
+    // 靜態資源（月、日、周）在初始化時一次性載入，不隨時間更新；
+    // 動態圖層（時、分、日期數字）初始為 NONE，由 update_time_display / update_date_display 填入
     uint32_t static_resources[] = {
         RESOURCE_ID_NONE, RESOURCE_ID_NONE, RESOURCE_ID_NONE, RESOURCE_ID_NONE,
         RESOURCE_ID_NONE, RESOURCE_ID_NONE, RESOURCE_ID_NONE, RESOURCE_ID_NONE,
@@ -657,12 +682,10 @@ static void setup_all_layers(Layer *parent) {
 }
 
 static void teardown_all_layers(void) {
-    // 使用 Iterator + Callback，簡潔且不重複
     iterate_all_layers(teardown_layer_cb, NULL);
 }
 
 static void refresh_all_layer_themes(void) {
-    // 使用 Iterator + Callback
     iterate_all_layers(refresh_theme_cb, NULL);
 }
 
@@ -692,7 +715,7 @@ static void handle_settings_update(DictionaryIterator *iter) {
     
     bool theme_changed = false;
 
-    // 1. Read Settings
+    // 步驟一：讀取並套用各項設定
 #if defined(PBL_COLOR)
     Tuple *bg = dict_find(iter, KEY_BACKGROUND_COLOR);
     if (bg) {
@@ -726,7 +749,7 @@ static void handle_settings_update(DictionaryIterator *iter) {
     Tuple *minute_color = dict_find(iter, KEY_MINUTE_COLOR);
     if (minute_color) {
 #if defined(PBL_COLOR)
-        // B&W 平台：theme_resolve_colors() 會強制覆蓋這兩個值，無需寫入 flash
+        // 黑白平台的強調色由 theme_resolve_colors() 強制計算，無需寫入 flash
         s_app.theme.minute_accent = GColorFromHEX(minute_color->value->int32);
         persist_write_int(KEY_MINUTE_COLOR, minute_color->value->int32);
 #endif
@@ -742,23 +765,20 @@ static void handle_settings_update(DictionaryIterator *iter) {
         theme_changed = true;
     }
 
-    // 2. Resolve Colors (Fix integrity)
-    // Ensure B&W constraints override any raw color inputs
+    // 步驟二：重新計算衍生色，確保黑白平台的色彩約束覆蓋原始輸入
     theme_resolve_colors(&s_app.theme);
 
-    // 3. Apply Theme
+    // 步驟三：套用主題至視窗背景與所有圖層
     if (theme_changed) {
         apply_theme_to_window();
     }
 
-    // 4. Other Settings
+    // 步驟四：套用動畫設定，靜態圖層（月、日、周）位置固定，不隨此設定變動
     Tuple *anim = dict_find(iter, KEY_ANIMATION_ENABLED);
     if (anim) {
         s_app.animation_enabled = anim->value->int32 == 1;
         persist_write_bool(KEY_ANIMATION_ENABLED, s_app.animation_enabled);
 
-        // 使用 Iterator + Callback，更新動畫位置
-        // 僅針對會動的圖層 (exclude static resources like yue/ri/zhou)
         iterate_animated_layers(set_anim_pos_cb, NULL);
     }
 }
@@ -808,6 +828,7 @@ static void app_init(void) {
     app_message_register_inbox_dropped(inbox_dropped_handler);
     app_message_register_outbox_failed(outbox_failed_handler);
     
+    // inbox/outbox 各 128 bytes，足以容納所有設定鍵值
     AppMessageResult result = app_message_open(128, 128);
     if (result != APP_MSG_OK) {
         APP_LOG(APP_LOG_LEVEL_ERROR, "AppMessage open failed: %d", (int)result);
