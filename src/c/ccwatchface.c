@@ -120,8 +120,8 @@ static AppState s_app;
 //
 // 每個陣列將數字索引對應至圖片資源 ID，供時間與日期圖層查表使用。
 // 命名規則：
-//   UPPERCASE（U）  = 大號中文數字圖片，用於顯示「時」
-//   LOWERCASE（L）  = 大號阿拉伯數字圖片，用於顯示「分」
+//   UPPERCASE（U）  = 大號大寫中文數字圖片，用於顯示「時」
+//   LOWERCASE（L）  = 大號小寫中文數字圖片，用於顯示「分」
 //   DATE_UPPERCASE（SU）/ DATE_LOWERCASE（SL）= 同上的縮小版，用於顯示「月日」
 //   TENS = 十位圖，ONES = 個位圖
 //   RESOURCE_ID_NONE = 該位置不顯示圖片（例如小時十位不足時）
@@ -172,7 +172,7 @@ static void theme_resolve_colors(ThemeConfig *theme) {
     theme->background = theme->is_dark ? GColorBlack : GColorWhite;
     theme->text = theme->is_dark ? GColorWhite : GColorBlack;
     
-    // 小時強調色：設為背景色時圖片與背景融合（視覺上不可見），設為文字色時正常顯示。
+    // 小時強調色：設為背景色時特定區域變為挖空顯示，設為文字色時正常顯示。
     // 此設計讓使用者可選擇黑白表盤是否突顯小時數字。
     theme->hour_accent = theme->bw_hour_accent ? theme->background : theme->text;
     
@@ -248,8 +248,8 @@ static void theme_apply_to_bitmap(const ThemeConfig *theme, GBitmap *bitmap, Lay
                           theme->text;
 
     // 圖片資源以固定色作為語意插槽，此處將其替換為當前主題配色：
-    //   彩色平台：Red → 強調色，Black → 文字色（或強調色，視圖層類型），White → 強調色
-    //   黑白平台：Black → 文字色（單色調色盤的唯一前景色）
+    //   彩色平台：Red → 強調色，Black → 文字色（或強調色，視圖層類型）
+    //   黑白平台：White → 強調色（同背景色），Black → 文字色（單色調色盤的唯一前景色）
     for (int i = 0; i < palette_size; i++) {
 #if defined(PBL_COLOR)
         if (gcolor_equal(palette[i], GColorRed)) {
@@ -562,7 +562,7 @@ static void update_time_display(struct tm *tick_time) {
 
     // 中文時間慣用語的特殊對應：
     //   :00 → 「點整」（如「三點整」），:30 → 「點半」（如「三點半」）
-    //   :10 → 使用 L1 + L0 組合，因為「一十分」在中文口語中通常念「十分」
+    //   :10 → 使用 L1 + L0 組合，因為「10分」在中文口語中通常念「十分」
     // 其餘分鐘：個位為 0 時（如 :20）十位圖本身即含「十」字，個位圖留空
     if (minute == 0) {
         minute_tens = RESOURCE_ID_IMG_DIAN;
