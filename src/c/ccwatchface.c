@@ -388,8 +388,6 @@ static void teardown_layer_cb(DisplayLayer *dl, void *context) {
 }
 
 // 用於主題更新
-// 注意：靜態圖層（月、日、週）雖然內容不變，但顏色仍需隨主題更新。
-// 此函數只修改調色盤與標記重繪，不涉及位置，不會造成圖層位移。
 static void refresh_theme_cb(DisplayLayer *dl, void *context) {
     if (dl->bitmap) {
         theme_apply_to_bitmap(&s_app.theme, dl->bitmap, dl->type);
@@ -401,7 +399,7 @@ static void refresh_theme_cb(DisplayLayer *dl, void *context) {
 
 // 用於動畫開關設定（直接傳入全域狀態，由呼叫方決定是否偏移）
 static void set_anim_pos_cb(DisplayLayer *dl, void *context) {
-    display_layer_set_position(dl, s_app.animation_enabled);  // 呼叫方決定偏移與否
+    display_layer_set_position(dl, s_app.animation_enabled);
 }
 
 // ==================== 動畫系統 ====================
@@ -411,7 +409,6 @@ static void anim_fade_in_stopped(Animation *anim, bool finished, void *context) 
     if (!dl || !dl->layer) return;
 
     if (!finished) {
-        // If interrupted, ensure we snap to the final correct position
         display_layer_set_position(dl, false);
     }
 
