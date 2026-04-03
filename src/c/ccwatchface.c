@@ -20,7 +20,8 @@
     #define DATE_ROW_Y 199
     #define DATE_MONTH1_X 8
     #define DATE_MONTH2_X 31
-    #define DATE_YUE_X 54
+    #define DATE_YUE_X 54display_layer_set_position(layers[i], false);
+
     #define DATE_DAY1_X 77
     #define DATE_DAY2_X 100
     #define DATE_RI_X 123
@@ -412,7 +413,8 @@ static void refresh_theme_cb(DisplayLayer *dl, void *context) {
 
 // 依當前動畫設定調整圖層起始位置（啟用時下偏 ANIMATION_OFFSET_Y，關閉時歸位至基準位置）
 static void set_anim_pos_cb(DisplayLayer *dl, void *context) {
-    display_layer_set_position(dl, s_app.animation_enabled);
+    display_layer_cleanup_animation(dl);
+    display_layer_set_position(dl, false);
 }
 
 // ==================== 動畫系統 ====================
