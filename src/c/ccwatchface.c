@@ -20,8 +20,7 @@
     #define DATE_ROW_Y 199
     #define DATE_MONTH1_X 8
     #define DATE_MONTH2_X 31
-    #define DATE_YUE_X 54display_layer_set_position(layers[i], false);
-
+    #define DATE_YUE_X 54
     #define DATE_DAY1_X 77
     #define DATE_DAY2_X 100
     #define DATE_RI_X 123
