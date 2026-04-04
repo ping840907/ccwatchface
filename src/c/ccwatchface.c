@@ -601,14 +601,12 @@ static void update_date_display(struct tm *tick_time) {
     uint32_t day_tens = RESOURCE_ID_NONE;
     uint32_t day_ones = RESOURCE_ID_NONE;
 
-    if (d2 < (int)ARRAY_LENGTH(DATE_LOWERCASE_ONES_RESOURCES)) {
-        day_ones = DATE_LOWERCASE_ONES_RESOURCES[d2];
-    }
+    day_ones = DATE_LOWERCASE_ONES_RESOURCES[d2];
 
     if (day > 10) {
-        if (d2 == 0 && d1 < (int)ARRAY_LENGTH(DATE_LOWERCASE_ONES_RESOURCES)) {
+        if (d2 == 0) {
             day_tens = DATE_LOWERCASE_ONES_RESOURCES[d1];
-        } else if (d1 < (int)ARRAY_LENGTH(DATE_LOWERCASE_TENS_RESOURCES)) {
+        } else {
             day_tens = DATE_LOWERCASE_TENS_RESOURCES[d1];
         }
     }
