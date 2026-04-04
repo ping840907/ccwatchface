@@ -550,7 +550,7 @@ static void update_time_display(struct tm *tick_time) {
     uint32_t hour_ones = (hour == 0) ? RESOURCE_ID_IMG_U0 :
                           TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
 
-    if (hour > 10 && hour / 10 < (int)ARRAY_LENGTH(TIME_UPPERCASE_TENS_RESOURCES)) {
+    if (hour > 10) {
         hour_tens = TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
     }
 
