@@ -547,11 +547,11 @@ static void update_time_display(struct tm *tick_time) {
     }
 
     uint32_t hour_tens = (hour == 10) ? 
-RESOURCE_ID_NONE : 
-TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
+    RESOURCE_ID_NONE : 
+    TIME_UPPERCASE_TENS_RESOURCES[hour / 10];
     uint32_t hour_ones = (hour == 0) ? 
-RESOURCE_ID_IMG_U0 : 
-TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
+    RESOURCE_ID_IMG_U0 : 
+    TIME_UPPERCASE_ONES_RESOURCES[hour % 10];
 
     display_layer_update(&s_app.hour_layers[0], hour_tens);
     display_layer_update(&s_app.hour_layers[1], hour_ones);
