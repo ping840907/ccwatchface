@@ -35,7 +35,8 @@
       "KEY_ANIMATION_ENABLED": 3,
       "KEY_BACKGROUND_COLOR": 4,
       "KEY_TEXT_COLOR": 5,
-      "KEY_BW_HOUR_ACCENT": 6
+      "KEY_BW_HOUR_ACCENT": 6,
+      "KEY_SWAP_DATE_TIME": 7
     },
     "capabilities": [
       "configurable"

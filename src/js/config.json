@@ -77,6 +77,12 @@
         "messageKey": "KEY_ANIMATION_ENABLED",
         "label": "Enable Animations",
         "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "KEY_SWAP_DATE_TIME",
+        "label": "Swap Date & Time Position",
+        "defaultValue": false
       }
     ]
   },
