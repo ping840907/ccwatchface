@@ -1,4 +1,4 @@
-# Chinese Character Watchface (中文數字錶盤)
+# zh-TW_Pixel
 
 ![image](display.jpg)
 
